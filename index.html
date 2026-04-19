@@ -585,18 +585,17 @@ async function save(){
     await sb.from('participants').insert(S.participants.map(name=>({tour_id:TOUR_ID, name})));
   }
 
-  // Eszközök szinkronizálása (UUID-s itemek csak updateljük, újakat inserteljük)
-  await sb.from('equipment').delete().eq('tour_id', TOUR_ID);
-  if(S.equipment.length){
-    await sb.from('equipment').insert(S.equipment.map(e=>({
-      tour_id: TOUR_ID,
-      name: e.name,
-      owner: e.owner||null,
-      packed: !!e.packed,
-      day: e.day||null
-    })));
-  }
-
+ // Eszközök szinkronizálása (FIX)
+await sb.from('equipment').upsert(
+  S.equipment.map(e => ({
+    id: e.id,
+    tour_id: TOUR_ID,
+    name: e.name,
+    owner: e.owner || null,
+    packed: !!e.packed,
+    day: e.day || null
+  }))
+);
   // Ételek szinkronizálása
   await sb.from('foods').delete().eq('tour_id', TOUR_ID);
   if(S.foods.length){
