@@ -203,6 +203,16 @@ textarea.inp{resize:vertical;min-height:70px}
 .inline-edit{display:inline-flex;align-items:center;gap:6px;cursor:pointer;border-bottom:1.5px dashed var(--txt3)}
 .inline-edit:hover{border-color:var(--acc);color:var(--acc)}
 
+/* DUPE GROUP */
+.dupeGroup{background:var(--surf);border-radius:var(--r);margin-bottom:12px;overflow:hidden;box-shadow:var(--sh);border:2px solid var(--ora)}
+.dupeGroupHdr{padding:10px 14px;background:var(--oraL);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ora)}
+.dupeGroupTitle{font-size:13px;font-weight:900;color:var(--ora);flex:1}
+.dupeCount{background:var(--ora);color:#fff;border-radius:20px;padding:2px 9px;font-size:12px;font-weight:900}
+
+/* WARN ITEM */
+.warnItem{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.6);border-radius:7px;padding:6px 10px;font-size:13px}
+.warnAv{width:26px;height:26px;border-radius:50%;background:var(--ora);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0}
+
 .tag{background:var(--accL);color:var(--acc);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800}
 
 /* Day equip inline add */
@@ -357,6 +367,7 @@ textarea.inp{resize:vertical;min-height:70px}
     <div class="fTab" onclick="setEF('free',this)">🟢 Szabad</div>
     <div class="fTab" onclick="setEF('taken',this)">🔴 Foglalt</div>
     <div class="fTab" onclick="setEF('done',this)">✅ Bepakolva</div>
+    <div class="fTab" onclick="setEF('dupe',this)" id="dupeTab">🔁 Dupla</div>
   </div>
   <div id="ePersonFilter" style="margin-bottom:10px"></div>
   <button class="btn btnP" style="margin-bottom:11px" onclick="openGlobalEquipAdd()">+ Eszköz foglalása</button>
@@ -429,14 +440,25 @@ textarea.inp{resize:vertical;min-height:70px}
     <div class="mHandle"></div>
     <button class="mClose" onclick="closeM('mEquip')">✕</button>
     <div class="mTitle">📦 Eszköz foglalása</div>
-    <div class="iGrp"><label class="iLbl">Ki foglalja?</label><select class="inp" id="eqWho"></select></div>
+    <div class="iGrp"><label class="iLbl">Ki foglalja?</label><select class="inp" id="eqWho" onchange="eqAC()"></select></div>
     <div class="iGrp"><label class="iLbl">Eszköz neve</label>
       <div class="acWrap">
-        <input class="inp" id="eqName" placeholder="pl. Merítőháló, bot..." oninput="eqAC()" onblur="setTimeout(()=>document.getElementById('eqACList').classList.remove('show'),200)">
+        <input class="inp" id="eqName" placeholder="pl. Bogrács, horgászbot..." oninput="eqAC()" autocomplete="off"
+          onblur="setTimeout(()=>document.getElementById('eqACList').classList.remove('show'),200)">
         <div class="acList" id="eqACList"></div>
       </div>
     </div>
-    <button class="btn btnP" onclick="addEquip(null)">🔒 Lefoglalom</button>
+    <!-- Figyelmeztetés terület -->
+    <div id="eqWarnBox" style="display:none;background:var(--oraL);border:1.5px solid var(--ora);border-radius:10px;padding:13px 14px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:900;color:var(--ora);margin-bottom:8px">⚠️ Hasonló eszköz már van!</div>
+      <div id="eqWarnList" style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px"></div>
+      <div style="font-size:13px;font-weight:800;color:var(--txt2)">Biztosan Te is hozod?</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btnP btnSm" style="flex:1" onclick="confirmAddEquip()">✅ Igen, én is hozom</button>
+        <button class="btn btnS btnSm" style="flex:1" onclick="closeM('mEquip')">❌ Nem kell</button>
+      </div>
+    </div>
+    <button class="btn btnP" id="eqSaveBtn" onclick="addEquip(null)">🔒 Lefoglalom</button>
     <button class="btn btnS" style="margin-top:8px" onclick="closeM('mEquip')">Mégsem</button>
   </div>
 </div>
@@ -519,7 +541,6 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 let S = { tour:null, participants:[], equipment:[], foods:[], theme:'light', collapsedDays:{} };
 let eFilter='all', infoDay=null;
 let TOUR_ID = null; // aktív tour UUID a Supabase-ben
-let _syncLock = false; // realtime loop megakadályozása
 
 // ========== SUPABASE LOAD ==========
 async function load(){
@@ -551,68 +572,98 @@ async function load(){
 }
 
 // ========== SUPABASE SAVE ==========
-async function save(){
-  localStorage.setItem('horgasz_theme', S.theme);
-  if(_syncLock) return;
-  if(!S.tour) return;
+// Minden művelet saját célzott DB-hívást végez — NEM töröl és újraszúr mindent.
+// Ez megakadályozza a Realtime visszacsatolási hurkot és a duplikációkat.
 
+let _myWriteTs = 0; // az utolsó saját írás időbélyege
+
+async function saveTour(){
+  localStorage.setItem('horgasz_theme', S.theme);
+  if(!S.tour) return;
+  _myWriteTs = Date.now();
   if(!TOUR_ID){
-    // Új túra létrehozása
     const {data, error} = await sb.from('tours').insert({
-      location: S.tour.location,
-      start_date: S.tour.start,
-      end_date: S.tour.end,
-      days: S.tour.days,
-      theme: S.theme,
-      collapsed_days: S.collapsedDays
+      location: S.tour.location, start_date: S.tour.start, end_date: S.tour.end,
+      days: S.tour.days, theme: S.theme, collapsed_days: S.collapsedDays
     }).select().single();
-    if(error){ console.error('Tour insert error:', error); return; }
+    if(error){ console.error('Tour insert:', error); return; }
     TOUR_ID = data.id;
   } else {
     await sb.from('tours').update({
-      location: S.tour.location,
-      start_date: S.tour.start,
-      end_date: S.tour.end,
-      days: S.tour.days,
-      theme: S.theme,
-      collapsed_days: S.collapsedDays
+      location: S.tour.location, start_date: S.tour.start, end_date: S.tour.end,
+      days: S.tour.days, theme: S.theme, collapsed_days: S.collapsedDays
     }).eq('id', TOUR_ID);
   }
+}
 
-  // Résztvevők szinkronizálása
-  await sb.from('participants').delete().eq('tour_id', TOUR_ID);
-  if(S.participants.length){
-    await sb.from('participants').insert(S.participants.map(name=>({tour_id:TOUR_ID, name})));
-  }
+async function saveParticipants(){
+  if(!TOUR_ID) return;
+  _myWriteTs = Date.now();
+  // Meglévők lekérése
+  const {data:existing} = await sb.from('participants').select('id,name').eq('tour_id',TOUR_ID);
+  const existingNames = (existing||[]).map(p=>p.name);
+  const toAdd = S.participants.filter(n=>!existingNames.includes(n));
+  const toRemove = (existing||[]).filter(p=>!S.participants.includes(p.name));
+  if(toRemove.length) await sb.from('participants').delete().in('id', toRemove.map(p=>p.id));
+  if(toAdd.length) await sb.from('participants').insert(toAdd.map(name=>({tour_id:TOUR_ID, name})));
+}
 
-  // Eszközök szinkronizálása (UUID-s itemek csak updateljük, újakat inserteljük)
-  await sb.from('equipment').delete().eq('tour_id', TOUR_ID);
-  if(S.equipment.length){
-    await sb.from('equipment').insert(S.equipment.map(e=>({
-      tour_id: TOUR_ID,
-      name: e.name,
-      owner: e.owner||null,
-      packed: !!e.packed,
-      day: e.day||null
-    })));
+async function saveEquipItem(e){
+  // Egyetlen eszköz mentése/frissítése
+  if(!TOUR_ID) return;
+  _myWriteTs = Date.now();
+  const isUUID = typeof e.id === 'string' && e.id.length === 36;
+  if(isUUID){
+    await sb.from('equipment').update({
+      name:e.name, owner:e.owner||null, packed:!!e.packed, day:e.day||null
+    }).eq('id', e.id);
+  } else {
+    const {data} = await sb.from('equipment').insert({
+      tour_id:TOUR_ID, name:e.name, owner:e.owner||null, packed:!!e.packed, day:e.day||null
+    }).select().single();
+    if(data) e.id = data.id; // UUID visszaírása a lokális state-be
   }
+}
 
-  // Ételek szinkronizálása
-  await sb.from('foods').delete().eq('tour_id', TOUR_ID);
-  if(S.foods.length){
-    await sb.from('foods').insert(S.foods.map(f=>({
-      tour_id: TOUR_ID,
-      day: f.day,
-      menu: f.menu,
-      chef: f.chef||null,
-      ingredients: f.ingredients||[]
-    })));
+async function deleteEquipItem(id){
+  if(!TOUR_ID) return;
+  _myWriteTs = Date.now();
+  const isUUID = typeof id === 'string' && id.length === 36;
+  if(isUUID) await sb.from('equipment').delete().eq('id', id);
+}
+
+async function saveFoodItem(f){
+  if(!TOUR_ID) return;
+  _myWriteTs = Date.now();
+  const isUUID = typeof f.id === 'string' && f.id.length === 36;
+  if(isUUID){
+    await sb.from('foods').update({
+      menu:f.menu, chef:f.chef||null, ingredients:f.ingredients||[]
+    }).eq('id', f.id);
+  } else {
+    const {data} = await sb.from('foods').insert({
+      tour_id:TOUR_ID, day:f.day, menu:f.menu, chef:f.chef||null, ingredients:f.ingredients||[]
+    }).select().single();
+    if(data) f.id = data.id;
   }
+}
+
+async function deleteFoodItem(day){
+  if(!TOUR_ID) return;
+  _myWriteTs = Date.now();
+  await sb.from('foods').delete().eq('tour_id',TOUR_ID).eq('day',day);
+}
+
+// Régi save() → visszafelé kompatibilis hívásokhoz (tour + participants egyszerre)
+async function save(){
+  await saveTour();
+  await saveParticipants();
 }
 
 // ========== TÖRLÉS - tour ==========
 async function deleteTourFromDB(){
   if(TOUR_ID){
+    _myWriteTs = Date.now();
     await sb.from('tours').delete().eq('id', TOUR_ID);
     TOUR_ID = null;
   }
@@ -620,44 +671,35 @@ async function deleteTourFromDB(){
 
 // ========== REALTIME ==========
 function initRealtime(){
-  // Összes releváns tábla figyelése
-  const channel = sb.channel('horgasz-realtime')
-    .on('postgres_changes', {event:'*', schema:'public', table:'tours'}, handleRemoteChange)
-    .on('postgres_changes', {event:'*', schema:'public', table:'participants'}, handleRemoteChange)
-    .on('postgres_changes', {event:'*', schema:'public', table:'equipment'}, handleRemoteChange)
-    .on('postgres_changes', {event:'*', schema:'public', table:'foods'}, handleRemoteChange)
-    .subscribe((status)=>{
+  sb.channel('horgasz-sync')
+    .on('postgres_changes', {event:'*', schema:'public', table:'equipment', filter:`tour_id=eq.${TOUR_ID}`}, handleRemoteChange)
+    .on('postgres_changes', {event:'*', schema:'public', table:'participants', filter:`tour_id=eq.${TOUR_ID}`}, handleRemoteChange)
+    .on('postgres_changes', {event:'*', schema:'public', table:'foods', filter:`tour_id=eq.${TOUR_ID}`}, handleRemoteChange)
+    .subscribe(status=>{
       const dot = document.getElementById('syncDot');
       if(dot) dot.style.background = status==='SUBSCRIBED' ? '#4caf50' : '#ff9800';
     });
 }
 
-async function handleRemoteChange(){
-  // Kis delay hogy a write tranzakció befejezzen
-  await new Promise(r=>setTimeout(r,300));
-  _syncLock = true;
-  await reloadFromDB();
-  _syncLock = false;
+let _reloadTimer = null;
+function handleRemoteChange(){
+  // Ha saját írásunk volt az elmúlt 2 másodpercben, figyelmen kívül hagyjuk
+  if(Date.now() - _myWriteTs < 2000) return;
+  // Debounce: gyors egymás utáni változásoknál csak egyszer töltünk újra
+  clearTimeout(_reloadTimer);
+  _reloadTimer = setTimeout(reloadFromDB, 400);
 }
 
 async function reloadFromDB(){
   if(!TOUR_ID) return;
-
-  const [{data:tours},{data:parts},{data:equip},{data:foods}] = await Promise.all([
-    sb.from('tours').select('*').eq('id',TOUR_ID).single(),
+  const [{data:parts},{data:equip},{data:foods}] = await Promise.all([
     sb.from('participants').select('name').eq('tour_id',TOUR_ID).order('created_at'),
     sb.from('equipment').select('*').eq('tour_id',TOUR_ID).order('created_at'),
     sb.from('foods').select('*').eq('tour_id',TOUR_ID).order('created_at')
   ]);
-
-  if(tours){
-    S.tour = { location:tours.location, start:tours.start_date, end:tours.end_date, days:tours.days||[] };
-    S.collapsedDays = tours.collapsed_days||{};
-  }
   S.participants = (parts||[]).map(p=>p.name);
   S.equipment = (equip||[]).map(e=>({id:e.id, name:e.name, owner:e.owner, packed:e.packed, day:e.day}));
   S.foods = (foods||[]).map(f=>({id:f.id, day:f.day, menu:f.menu, chef:f.chef, ingredients:f.ingredients||[]}));
-
   renderAll();
   toast('🔄 Frissítve másik eszközről!');
 }
@@ -793,13 +835,13 @@ function addParticipant(){
   const n=document.getElementById('partNameInp').value.trim();
   if(!n)return;
   if(S.participants.includes(n)){alert('Ez a név már szerepel!');return}
-  S.participants.push(n);save();closeM('mPart');renderAll();toast('👤 '+n+' hozzáadva!');
+  S.participants.push(n);saveParticipants();closeM('mPart');renderAll();toast('👤 '+n+' hozzáadva!');
 }
 function removePart(name){
   if(!confirm(`Törlöd ${name} nevét?`))return;
   S.participants=S.participants.filter(p=>p!==name);
   S.equipment.forEach(e=>{if(e.owner===name){e.owner=null;e.packed=false}});
-  save();renderAll();toast('🗑️ Törölve: '+name);
+  saveParticipants();renderAll();toast('🗑️ Törölve: '+name);
 }
 function openEditPart(name){
   document.getElementById('editPartOld').value=name;
@@ -815,14 +857,14 @@ function savePartName(){
   S.participants=S.participants.map(p=>p===oldName?newName:p);
   S.equipment.forEach(e=>{if(e.owner===oldName)e.owner=newName});
   S.foods.forEach(f=>{if(f.chef===oldName)f.chef=newName});
-  save();closeM('mEditPart');closeM('mPerson');renderAll();toast('✏️ Név megváltoztatva!');
+  saveParticipants();closeM('mEditPart');closeM('mPerson');renderAll();toast('✏️ Név megváltoztatva!');
 }
 function removePartFromEdit(){
   const name=document.getElementById('editPartOld').value;
   if(!confirm(`Törlöd ${name} nevét?`))return;
   S.participants=S.participants.filter(p=>p!==name);
   S.equipment.forEach(e=>{if(e.owner===name){e.owner=null;e.packed=false}});
-  save();closeM('mEditPart');renderAll();toast('🗑️ Törölve: '+name);
+  saveParticipants();closeM('mEditPart');renderAll();toast('🗑️ Törölve: '+name);
 }
 function renderParticipants(){
   const el=document.getElementById('partList');
@@ -838,7 +880,7 @@ function renderParticipants(){
 // ========== DAYS - COLLAPSIBLE ==========
 function toggleDay(d){
   S.collapsedDays[d]=!S.collapsedDays[d];
-  save();
+  saveTour();
   const body=document.getElementById('dayBody-'+d);
   const chevron=document.getElementById('dayChev-'+d);
   if(body){body.classList.toggle('collapsed',S.collapsedDays[d]);}
@@ -847,7 +889,7 @@ function toggleDay(d){
 function toggleAllDays(open){
   if(!S.tour)return;
   S.tour.days.forEach(d=>{S.collapsedDays[d]=!open});
-  save();renderDays();
+  saveTour();renderDays();
 }
 
 function renderDays(){
@@ -913,26 +955,31 @@ function renderDayEquipItems(d){
   if(!items.length) return '<div style="font-size:13px;color:var(--txt3);padding:10px 15px">Még nincs eszköz ehhez a naphoz</div>';
   return items.map(e=>`
     <div class="eRow" id="er-${e.id}">
-      <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked(${e.id},'day','${d}')">${e.packed?'✓':''}</div>
+      <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked('${e.id}','day','${d}')">${e.packed?'✓':''}</div>
       <div style="flex:1">
         <div class="eName ${e.packed?'done':''}">${e.name}</div>
         <div class="eOwner"><span class="bdg ${e.owner?'bTaken':'bFree'}">${e.owner?'🔒 '+e.owner:'🟢 Szabad'}</span>${e.packed?'<span class="bdg bDone" style="margin-left:4px">✅</span>':''}</div>
       </div>
       <div class="eActions">
-        <button class="btn btnXs btnS" onclick="openEqEdit(${e.id})">✏️</button>
-        <button class="btn btnXs btnD" onclick="deleteEq(${e.id},'day','${d}')">✕</button>
+        <button class="btn btnXs btnS" onclick="openEqEdit('${e.id}')">✏️</button>
+        <button class="btn btnXs btnD" onclick="deleteEq('${e.id}','day','${d}')">✕</button>
       </div>
     </div>`).join('');
 }
 
 function dayEqAC(d){
-  const val=document.getElementById('dEqInp-'+d).value.toLowerCase();
+  const val=document.getElementById('dEqInp-'+d).value;
   const list=document.getElementById('dEqAC-'+d);
-  if(!val){list.classList.remove('show');return}
-  const all=[...new Set(S.equipment.map(e=>e.name))];
-  const matches=all.filter(n=>n.toLowerCase().includes(val));
-  if(!matches.length){list.classList.remove('show');return}
-  list.innerHTML=matches.map(n=>`<div class="acItem" onmousedown="document.getElementById('dEqInp-${d}').value='${esc(n)}';document.getElementById('dEqAC-${d}').classList.remove('show')">${n}</div>`).join('');
+  if(!val.trim()){list.classList.remove('show');return}
+  const allNames=[...new Set(S.equipment.map(e=>e.name))];
+  const scored=allNames.map(n=>({n,s:fuzzyMatch(n,val)})).filter(x=>x.s>=0.3).sort((a,b)=>b.s-a.s).slice(0,6);
+  if(!scored.length){list.classList.remove('show');return}
+  const who=document.getElementById('dEqWho-'+d)?.value||'';
+  list.innerHTML=scored.map(({n})=>{
+    const owners=S.equipment.filter(e=>fuzzyMatch(e.name,n)>=0.45&&e.owner&&e.owner!==who).map(e=>e.owner);
+    const ownerTxt=owners.length?`<span style="font-size:11px;color:var(--ora);margin-left:4px">⚠️ ${owners.join(', ')}</span>`:'';
+    return `<div class="acItem" onmousedown="document.getElementById('dEqInp-${d}').value='${esc(n)}';document.getElementById('dEqAC-${d}').classList.remove('show')">${n}${ownerTxt}</div>`;
+  }).join('');
   list.classList.add('show');
 }
 
@@ -940,11 +987,15 @@ function addDayEquip(d){
   const name=document.getElementById('dEqInp-'+d).value.trim();
   const who=document.getElementById('dEqWho-'+d)?.value||'';
   if(!name) return;
-  const existing=S.equipment.find(e=>e.name.toLowerCase()===name.toLowerCase()&&e.owner&&e.owner!==who);
-  if(existing){alert(`"${name}" már ${existing.owner} eszköze!`);return}
-  S.equipment.push({id:Date.now()+Math.random(),name,owner:who||null,packed:false,day:d});
+  const similar=findSimilar(name).filter(e=>e.owner&&e.owner!==who);
+  if(similar.length){
+    const names=similar.map(e=>`${e.owner}: ${e.name}`).join(', ');
+    if(!confirm(`⚠️ Hasonló eszköz már van!\n${names}\n\nBiztosan Te is hozod?`))return;
+  }
+  const item={id:null,name,owner:who||null,packed:false,day:d};
+  S.equipment.push(item);
   document.getElementById('dEqInp-'+d).value='';
-  save();
+  saveEquipItem(item);
   const deq=document.getElementById('deq-'+d);
   if(deq) deq.innerHTML=renderDayEquipItems(d);
   renderHome();
@@ -953,37 +1004,130 @@ function addDayEquip(d){
   toast('📦 Eszköz hozzáadva!');
 }
 
-// ========== GLOBAL EQUIP ==========
+// ========== FUZZY SIMILARITY ==========
+function normalize(s){
+  return (s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // ékezetek eltávolítása
+    .replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();
+}
+function fuzzyMatch(a,b){
+  const na=normalize(a), nb=normalize(b);
+  if(na===nb) return 1.0;
+  if(na.includes(nb)||nb.includes(na)) return 0.85;
+  // Bigram hasonlóság
+  const bigrams=s=>{const r=new Set();for(let i=0;i<s.length-1;i++)r.add(s.slice(i,i+2));return r};
+  const ba=bigrams(na),bb=bigrams(nb);
+  let inter=0;ba.forEach(g=>{if(bb.has(g))inter++});
+  const union=ba.size+bb.size-inter;
+  return union?inter/union:0;
+}
+function findSimilar(name){
+  // Visszaadja az összes eszközt aminek neve hasonló (>0.45 score)
+  return S.equipment.filter(e=>{
+    const score=fuzzyMatch(e.name,name);
+    return score>=0.45;
+  });
+}
+
+// ========== GLOBAL EQUIP ADD ==========
 function openGlobalEquipAdd(){
   if(!S.tour){alert('Először hozz létre túrát!');return}
   if(!S.participants.length){alert('Először adj hozzá résztvevőket!');return}
   document.getElementById('eqWho').innerHTML=S.participants.map(p=>`<option value="${p}">${p}</option>`).join('');
   document.getElementById('eqName').value='';
+  document.getElementById('eqWarnBox').style.display='none';
+  document.getElementById('eqSaveBtn').style.display='';
+  document.getElementById('eqACList').classList.remove('show');
   openM('mEquip');setTimeout(()=>document.getElementById('eqName').focus(),320);
 }
+
 function eqAC(){
-  const val=document.getElementById('eqName').value.toLowerCase();
+  const val=document.getElementById('eqName').value;
   const list=document.getElementById('eqACList');
-  if(!val){list.classList.remove('show');return}
-  const all=[...new Set(S.equipment.map(e=>e.name))];
-  const matches=all.filter(n=>n.toLowerCase().includes(val));
-  if(!matches.length){list.classList.remove('show');return}
-  list.innerHTML=matches.map(n=>`<div class="acItem" onmousedown="document.getElementById('eqName').value='${esc(n)}';document.getElementById('eqACList').classList.remove('show')">${n}</div>`).join('');
+  const warnBox=document.getElementById('eqWarnBox');
+  const saveBtn=document.getElementById('eqSaveBtn');
+
+  // Figyelmeztetés elrejtése gépelés közben
+  warnBox.style.display='none';
+  saveBtn.style.display='';
+
+  if(!val.trim()){list.classList.remove('show');return}
+
+  // Autocomplete: összes egyedi eszköznév fuzzy sorrendben
+  const allNames=[...new Set(S.equipment.map(e=>e.name))];
+  const scored=allNames
+    .map(n=>({n,s:fuzzyMatch(n,val)}))
+    .filter(x=>x.s>=0.3)
+    .sort((a,b)=>b.s-a.s)
+    .slice(0,8);
+
+  if(!scored.length){list.classList.remove('show');return}
+
+  list.innerHTML=scored.map(({n,s})=>{
+    // Ki hozza már?
+    const owners=S.equipment.filter(e=>fuzzyMatch(e.name,n)>=0.45&&e.owner).map(e=>e.owner);
+    const ownerTxt=owners.length?`<span style="font-size:11px;color:var(--txt3);margin-left:4px">← ${owners.join(', ')}</span>`:'';
+    const warn=owners.length?'⚠️ ':'';
+    return `<div class="acItem" onmousedown="selectEqName('${esc(n)}')">${warn}${n}${ownerTxt}</div>`;
+  }).join('');
   list.classList.add('show');
 }
+
+function selectEqName(name){
+  document.getElementById('eqName').value=name;
+  document.getElementById('eqACList').classList.remove('show');
+  checkEqDuplicate();
+}
+
+function checkEqDuplicate(){
+  const name=document.getElementById('eqName').value.trim();
+  const who=document.getElementById('eqWho').value;
+  const warnBox=document.getElementById('eqWarnBox');
+  const warnList=document.getElementById('eqWarnList');
+  const saveBtn=document.getElementById('eqSaveBtn');
+  if(!name){warnBox.style.display='none';saveBtn.style.display='';return}
+
+  const similar=findSimilar(name).filter(e=>e.owner&&e.owner!==who);
+  if(!similar.length){warnBox.style.display='none';saveBtn.style.display='';return}
+
+  // Van hasonló! Megmutatjuk
+  warnList.innerHTML=similar.map(e=>`
+    <div class="warnItem">
+      <div class="warnAv">${e.owner.charAt(0).toUpperCase()}</div>
+      <div style="flex:1"><strong>${e.owner}</strong> hozza: <em>${e.name}</em></div>
+      <button class="btn btnXs btnD" onclick="deleteEq('${e.id}','page',null);checkEqDuplicate()" style="flex-shrink:0">🗑️ Törlöm</button>
+    </div>`).join('');
+  warnBox.style.display='block';
+  saveBtn.style.display='none'; // elrejti az alap mentés gombot, a warn boxban van Igen/Nem
+}
+
+function confirmAddEquip(){
+  // Felhasználó tudatosan is hozza
+  const name=document.getElementById('eqName').value.trim();
+  const who=document.getElementById('eqWho').value;
+  if(!name||!who)return;
+  const item={id:null,name,owner:who,packed:false,day:null};
+  S.equipment.push(item);
+  saveEquipItem(item);closeM('mEquip');renderAll();toast('🔒 Eszköz lefoglalva!');
+}
+
 function addEquip(day){
   const who=document.getElementById('eqWho').value;
   const name=document.getElementById('eqName').value.trim();
   if(!name){alert('Add meg az eszköz nevét!');return}
-  const existing=S.equipment.find(e=>e.name.toLowerCase()===name.toLowerCase()&&e.owner&&e.owner!==who);
-  if(existing){alert(`"${name}" már ${existing.owner} eszköze!`);return}
-  S.equipment.push({id:Date.now(),name,owner:who,packed:false,day:day||null});
-  save();closeM('mEquip');renderAll();toast('🔒 Eszköz lefoglalva!');
+  // Ha a warn box látható, azt jelenti dupla van → ne engedjen menteni
+  if(document.getElementById('eqWarnBox').style.display!=='none') return;
+  // Gyors ellenőrzés egyeztetés nélkül
+  const similar=findSimilar(name).filter(e=>e.owner&&e.owner!==who);
+  if(similar.length){checkEqDuplicate();return}
+  const item={id:null,name,owner:who,packed:false,day:day||null};
+  S.equipment.push(item);
+  saveEquipItem(item);closeM('mEquip');renderAll();toast('🔒 Eszköz lefoglalva!');
 }
 
 // ========== EQUIP EDIT ==========
 function openEqEdit(id){
-  const e=S.equipment.find(x=>x.id==id);
+  const e=S.equipment.find(x=>String(x.id)===String(id));
   if(!e)return;
   document.getElementById('eqEditId').value=id;
   document.getElementById('eqEditName').value=e.name;
@@ -995,25 +1139,26 @@ function openEqEdit(id){
 }
 function saveEqEdit(){
   const id=document.getElementById('eqEditId').value;
-  const e=S.equipment.find(x=>x.id==id);
+  const e=S.equipment.find(x=>String(x.id)===String(id));
   if(!e)return;
   const newName=document.getElementById('eqEditName').value.trim();
   const newOwner=document.getElementById('eqEditOwner').value;
   const newDay=document.getElementById('eqEditDay').value;
   if(!newName){alert('Add meg a nevet!');return}
   e.name=newName;e.owner=newOwner||null;e.day=newDay||null;
-  save();closeM('mEqEdit');renderAll();toast('✅ Eszköz frissítve!');
+  saveEquipItem(e);closeM('mEqEdit');renderAll();toast('✅ Eszköz frissítve!');
 }
 function deleteEqFromEdit(){
   const id=document.getElementById('eqEditId').value;
   if(!confirm('Törlöd ezt az eszközt?'))return;
-  S.equipment=S.equipment.filter(e=>e.id!=id);
-  save();closeM('mEqEdit');renderAll();toast('🗑️ Eszköz törölve');
+  deleteEquipItem(id);
+  S.equipment=S.equipment.filter(e=>String(e.id)!==String(id));
+  closeM('mEqEdit');renderAll();toast('🗑️ Eszköz törölve');
 }
 function deleteEq(id,ctx,d){
   if(!confirm('Törlöd?'))return;
-  S.equipment=S.equipment.filter(e=>e.id!=id);
-  save();
+  deleteEquipItem(id);
+  S.equipment=S.equipment.filter(e=>String(e.id)!==String(id));
   if(ctx==='day'){
     const deq=document.getElementById('deq-'+d);
     if(deq)deq.innerHTML=renderDayEquipItems(d);
@@ -1026,9 +1171,10 @@ function deleteEq(id,ctx,d){
   toast('🗑️ Törölve');
 }
 function togglePacked(id,ctx,d){
-  const e=S.equipment.find(x=>x.id==id);
+  const e=S.equipment.find(x=>String(x.id)===String(id));
   if(!e)return;
-  e.packed=!e.packed;save();
+  e.packed=!e.packed;
+  saveEquipItem(e);
   if(ctx==='day'){
     const deq=document.getElementById('deq-'+d);
     if(deq)deq.innerHTML=renderDayEquipItems(d);
@@ -1049,12 +1195,81 @@ function setEF(f,el){
   el.classList.add('on');
   renderEquipPage();
 }
+
 function renderEquipPage(){
   const pf=document.getElementById('ePersonFilter');
-  pf.innerHTML=S.participants.length?`<select class="inp" id="ePersonSel" onchange="ePerson=this.value;renderEquipPage()">
+  pf.innerHTML=eF==='dupe'?'':S.participants.length?`<select class="inp" id="ePersonSel" onchange="ePerson=this.value;renderEquipPage()">
     <option value="">— Mindenki —</option>
     ${S.participants.map(p=>`<option value="${p}" ${ePerson===p?'selected':''}>${p}</option>`).join('')}
   </select>`:'';
+
+  const el=document.getElementById('eList');
+
+  // ===== DUPLA NÉZET =====
+  if(eF==='dupe'){
+    // Csoportosítás fuzzy alapon
+    const groups=[];
+    const assigned=new Set();
+    S.equipment.forEach(e=>{
+      if(assigned.has(String(e.id)))return;
+      const similar=S.equipment.filter(x=>String(x.id)!==String(e.id)&&fuzzyMatch(e.name,x.name)>=0.45);
+      if(similar.length){
+        const group=[e,...similar];
+        group.forEach(x=>assigned.add(String(x.id)));
+        groups.push(group);
+      }
+    });
+    if(!groups.length){
+      el.innerHTML=`<div class="empty"><div class="emptyIc">✅</div><p class="emptyTxt">Nincs duplikált eszköz!</p></div>`;
+      return;
+    }
+    el.innerHTML=groups.map(group=>{
+      const repName=group[0].name;
+      return `<div class="dupeGroup">
+        <div class="dupeGroupHdr">
+          <span class="dupeGroupTitle">🔁 "${repName}" és hasonlók</span>
+          <span class="dupeCount">${group.length} db</span>
+        </div>
+        ${group.map(e=>`
+        <div class="eRow" id="er-${e.id}" style="background:var(--surf)">
+          <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked('${e.id}','page',null)">${e.packed?'✓':''}</div>
+          <div style="flex:1">
+            <div class="eName ${e.packed?'done':''}">${e.name}</div>
+            <div class="eOwner">
+              <span class="bdg ${e.owner?'bTaken':'bFree'}">${e.owner?'🔒 '+e.owner:'🟢 Szabad'}</span>
+              ${e.day?`<span class="bdg bBlu" style="margin-left:4px">📅 ${fmtD(e.day)}</span>`:''}
+              ${e.packed?'<span class="bdg bDone" style="margin-left:4px">✅</span>':''}
+            </div>
+          </div>
+          <div class="eActions">
+            <button class="btn btnXs btnS" onclick="openEqEdit('${e.id}')">✏️</button>
+            <button class="btn btnXs btnD" onclick="deleteEqAndRefresh('${e.id}')">🗑️</button>
+          </div>
+        </div>`).join('')}
+      </div>`;
+    }).join('');
+
+    // Dupla szám badge a tabra
+    const dupeTab=document.getElementById('dupeTab');
+    if(dupeTab) dupeTab.textContent=`🔁 Dupla (${groups.reduce((s,g)=>s+g.length,0)})`;
+    return;
+  }
+
+  // ===== NORMÁL NÉZET =====
+  // Dupla tab badge frissítése a háttérben
+  const dupeTab=document.getElementById('dupeTab');
+  if(dupeTab){
+    const assigned2=new Set();let dc=0;
+    S.equipment.forEach(e=>{
+      if(assigned2.has(String(e.id)))return;
+      const sim=S.equipment.filter(x=>String(x.id)!==String(e.id)&&fuzzyMatch(e.name,x.name)>=0.45);
+      if(sim.length){[e,...sim].forEach(x=>assigned2.add(String(x.id)));dc+=[e,...sim].length;}
+    });
+    dupeTab.textContent=dc>0?`🔁 Dupla (${dc})`:'🔁 Dupla';
+    dupeTab.style.background=dc>0?'var(--oraL)':'';
+    dupeTab.style.color=dc>0?'var(--ora)':'';
+    dupeTab.style.borderColor=dc>0?'var(--ora)':'';
+  }
 
   let list=[...S.equipment];
   if(eF==='free')list=list.filter(e=>!e.owner);
@@ -1062,14 +1277,13 @@ function renderEquipPage(){
   if(eF==='done')list=list.filter(e=>e.packed);
   if(ePerson)list=list.filter(e=>e.owner===ePerson);
 
-  const el=document.getElementById('eList');
   if(!list.length){
     el.innerHTML=`<div class="empty"><div class="emptyIc">📦</div><p class="emptyTxt">${S.equipment.length?'Nincs ilyen eszköz':'Még nincs eszköz'}</p></div>`;
     return;
   }
   el.innerHTML=`<div class="card" style="padding:0">`+list.map(e=>`
     <div class="eRow">
-      <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked(${e.id},'page',null)">${e.packed?'✓':''}</div>
+      <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked('${e.id}','page',null)">${e.packed?'✓':''}</div>
       <div style="flex:1">
         <div class="eName ${e.packed?'done':''}">${e.name}</div>
         <div class="eOwner">
@@ -1079,10 +1293,17 @@ function renderEquipPage(){
         </div>
       </div>
       <div class="eActions">
-        <button class="btn btnXs btnS" onclick="openEqEdit(${e.id})">✏️</button>
-        <button class="btn btnXs btnD" onclick="deleteEq(${e.id},'page',null)">✕</button>
+        <button class="btn btnXs btnS" onclick="openEqEdit('${e.id}')">✏️</button>
+        <button class="btn btnXs btnD" onclick="deleteEq('${e.id}','page',null)">✕</button>
       </div>
     </div>`).join('')+`</div>`;
+}
+
+function deleteEqAndRefresh(id){
+  if(!confirm('Törlöd?'))return;
+  deleteEquipItem(id);
+  S.equipment=S.equipment.filter(e=>String(e.id)!==String(id));
+  renderHome();renderEquipPage();toast('🗑️ Törölve');
 }
 
 // ========== FOOD ==========
@@ -1107,15 +1328,17 @@ function saveFood(){
   const ingStr=document.getElementById('foodMIngs').value.trim();
   if(!menu){alert('Add meg a menüt!');return}
   const ingredients=ingStr?ingStr.split(',').map(s=>s.trim()).filter(Boolean):[];
-  S.foods=S.foods.filter(f=>f.day!==day);
-  S.foods.push({day,menu,chef,ingredients});
-  save();closeM('mFood');renderAll();toast('🍲 Menü mentve!');
+  const existing=S.foods.find(f=>f.day===day);
+  if(existing){existing.menu=menu;existing.chef=chef;existing.ingredients=ingredients;saveFoodItem(existing);}
+  else{const item={id:null,day,menu,chef,ingredients};S.foods.push(item);saveFoodItem(item);}
+  closeM('mFood');renderAll();toast('🍲 Menü mentve!');
 }
 function deleteFood(){
   const day=document.getElementById('foodMDay').value;
   if(!confirm('Törlöd a napi menüt?'))return;
+  deleteFoodItem(day);
   S.foods=S.foods.filter(f=>f.day!==day);
-  save();closeM('mFood');renderAll();toast('🗑️ Menü törölve');
+  closeM('mFood');renderAll();toast('🗑️ Menü törölve');
 }
 function addFoodEquip(d){
   const chef=S.foods.find(f=>f.day===d)?.chef;
@@ -1123,8 +1346,9 @@ function addFoodEquip(d){
   if(!inp||!chef)return;
   const n=inp.value.trim();
   if(!n)return;
-  S.equipment.push({id:Date.now()+Math.random(),name:n,owner:chef,packed:false,day:d});
-  save();inp.value='';renderFoodPage();renderHome();
+  const item={id:null,name:n,owner:chef,packed:false,day:d};
+  S.equipment.push(item);
+  saveEquipItem(item);inp.value='';renderFoodPage();renderHome();
   const activePg=document.querySelector('.pg.on')?.id?.replace('pg-','');
   if(activePg==='equip')renderEquipPage();
   toast('📦 Eszköz hozzáadva!');
@@ -1163,11 +1387,11 @@ function renderFoodPage(){
         ${dayEquip.length?`<div style="display:flex;flex-direction:column;gap:0;margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid var(--border)">
           ${dayEquip.map(e=>`
           <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surf);border-bottom:1px solid var(--border)">
-            <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked(${e.id},'food','${d}')" style="width:26px;height:26px;font-size:13px">${e.packed?'✓':''}</div>
+            <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked('${e.id}','food','${d}')" style="width:26px;height:26px;font-size:13px">${e.packed?'✓':''}</div>
             <div class="eName ${e.packed?'done':''}" style="flex:1;font-size:14px">${e.name}</div>
             ${e.packed?'<span class="bdg bDone" style="font-size:11px">✅</span>':'<span class="bdg bWarn" style="font-size:11px">⏳</span>'}
-            <button class="btn btnXs btnS" onclick="openEqEdit(${e.id})">✏️</button>
-            <button class="btn btnXs btnD" onclick="deleteEq(${e.id},'food','${d}')">✕</button>
+            <button class="btn btnXs btnS" onclick="openEqEdit('${e.id}')">✏️</button>
+            <button class="btn btnXs btnD" onclick="deleteEq('${e.id}','food','${d}')">✕</button>
           </div>`).join('')}
         </div>`:`<div style="font-size:13px;color:var(--txt3);margin-bottom:8px">Még nincs eszköz ehhez a naphoz</div>`}
         <div style="display:flex;gap:6px">
@@ -1202,13 +1426,13 @@ function openPersonModal(name){
     <div style="font-size:13px;font-weight:800;color:var(--txt2);margin-bottom:8px">📦 ESZKÖZEI</div>
     ${myEquip.length?myEquip.map(e=>`
       <div class="eRow" style="padding:9px 0;border-bottom:1px solid var(--border)">
-        <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked(${e.id},'modal',null);openPersonModal('${esc(name)}')">${e.packed?'✓':''}</div>
+        <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked('${e.id}','modal',null);openPersonModal('${esc(name)}')">${e.packed?'✓':''}</div>
         <div style="flex:1">
           <div class="eName ${e.packed?'done':''}">${e.name}</div>
           ${e.day?`<div style="font-size:11px;color:var(--txt3)">📅 ${fmtD(e.day)}</div>`:''}
         </div>
         ${e.packed?'<span class="bdg bDone">✅ Kész</span>':'<span class="bdg bWarn">⏳ Hiányzik</span>'}
-        <button class="btn btnXs btnS" style="margin-left:6px" onclick="openEqEdit(${e.id})">✏️</button>
+        <button class="btn btnXs btnS" style="margin-left:6px" onclick="openEqEdit('${e.id}')">✏️</button>
       </div>`).join(''):'<div style="font-size:13px;color:var(--txt3);padding:8px 0">Nincs foglalt eszköze</div>'}
     <div style="margin-top:12px">
       <div style="font-size:13px;font-weight:800;color:var(--txt2);margin-bottom:8px">➕ ÚJ ESZKÖZ</div>
@@ -1236,10 +1460,14 @@ function addEquipForPerson(name){
   const inp=document.getElementById('persEqInp');
   const n=inp.value.trim();
   if(!n)return;
-  const existing=S.equipment.find(e=>e.name.toLowerCase()===n.toLowerCase()&&e.owner&&e.owner!==name);
-  if(existing){alert(`"${n}" már ${existing.owner} eszköze!`);return}
-  S.equipment.push({id:Date.now(),name:n,owner:name,packed:false,day:null});
-  save();inp.value='';openPersonModal(name);renderAll();toast('📦 Eszköz hozzáadva!');
+  const similar=findSimilar(n).filter(e=>e.owner&&e.owner!==name);
+  if(similar.length){
+    const names=similar.map(e=>`${e.owner}: ${e.name}`).join(', ');
+    if(!confirm(`⚠️ Hasonló eszköz már van!\n${names}\n\nBiztosan Te is hozod?`))return;
+  }
+  const item={id:null,name:n,owner:name,packed:false,day:null};
+  S.equipment.push(item);
+  saveEquipItem(item);inp.value='';openPersonModal(name);renderAll();toast('📦 Eszköz hozzáadva!');
 }
 
 // ========== PERSONS PAGE ==========
@@ -1278,8 +1506,9 @@ function addEquipFromSummary(name){
   if(!n)return;
   const existing=S.equipment.find(e=>e.name.toLowerCase()===n.toLowerCase()&&e.owner&&e.owner!==name);
   if(existing){alert(`"${n}" már ${existing.owner} eszköze!`);return}
-  S.equipment.push({id:Date.now()+Math.random(),name:n,owner:name,packed:false,day:null});
-  save();inp.value='';renderSummaryPage();renderHome();
+  const item={id:null,name:n,owner:name,packed:false,day:null};
+  S.equipment.push(item);
+  saveEquipItem(item);inp.value='';renderSummaryPage();renderHome();
   const activePg=document.querySelector('.pg.on')?.id?.replace('pg-','');
   if(activePg==='equip')renderEquipPage();
   toast('📦 Eszköz hozzáadva!');
@@ -1310,7 +1539,7 @@ function renderSummaryPage(){
           ${myFoods.length?`<span class="bdg bBlu" style="font-size:11px">🍲 ${myFoods.length} nap főz</span>`:''}
         </div>
         <div class="sumTags">
-          ${myEq.length?myEq.map(e=>`<span class="sumTag ${e.packed?'sumTagDone':'sumTagEq'}" onclick="openEqEdit(${e.id})" style="cursor:pointer" title="Kattints a szerkesztéshez">${e.packed?'✅':'📦'} ${e.name}${e.day?' ('+fmtD(e.day)+')':''}</span>`).join('')
+          ${myEq.length?myEq.map(e=>`<span class="sumTag ${e.packed?'sumTagDone':'sumTagEq'}" onclick="openEqEdit('${e.id}')" style="cursor:pointer" title="Kattints a szerkesztéshez">${e.packed?'✅':'📦'} ${e.name}${e.day?' ('+fmtD(e.day)+')':''}</span>`).join('')
           :`<span style="font-size:13px;color:var(--txt3)">– nincs eszköz –</span>`}
         </div>
         ${myFoods.length?`<div style="margin-top:7px;display:flex;flex-wrap:wrap;gap:5px">
@@ -1329,7 +1558,7 @@ function renderSummaryPage(){
     if(freeEq.length){
       html+=`<div class="sumPersonRow">
         <div class="sumPersonName" style="color:var(--acc)">🟢 Szabad eszközök</div>
-        <div class="sumTags">${freeEq.map(e=>`<span class="sumTag sumTagEq" onclick="openEqEdit(${e.id})" style="cursor:pointer">📦 ${e.name}</span>`).join('')}</div>
+        <div class="sumTags">${freeEq.map(e=>`<span class="sumTag sumTagEq" onclick="openEqEdit('${e.id}')" style="cursor:pointer">📦 ${e.name}</span>`).join('')}</div>
       </div>`;
     }
   }
@@ -1493,7 +1722,7 @@ function fishBans(m){
 function fmtD(d){return new Date(d).toLocaleDateString('hu-HU',{month:'short',day:'numeric'})}
 function pad(n){return String(n).padStart(2,'0')}
 function esc(s){return(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}
-async function resetAll(){await deleteTourFromDB();S={tour:null,participants:[],equipment:[],foods:[],theme:S.theme,collapsedDays:{}};renderAll();toast('🗑️ Minden törölve');}
+async function resetAll(){await deleteTourFromDB();S={tour:null,participants:[],equipment:[],foods:[],theme:S.theme,collapsedDays:{}};TOUR_ID=null;renderAll();toast('🗑️ Minden törölve');}
 </script>
 </body>
 </html>
