@@ -111,12 +111,14 @@ textarea.inp{resize:vertical;min-height:70px}
 .tHero h2{font-family:var(--fdis);font-size:28px;letter-spacing:1px;margin-bottom:3px}
 .tHero p{font-size:13px;opacity:.85}
 .tMeta{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
-.tMetaItem{background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:800}
+.tMetaItem{background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:800;transition:background .15s}
+.tMetaItem:active{background:rgba(255,255,255,0.4)}
 
 /* KPI */
 .kpiRow{display:flex;gap:0}
-.kpiItem{flex:1;text-align:center;padding:11px 4px}
+.kpiItem{flex:1;text-align:center;padding:11px 4px;transition:background .15s;border-radius:4px}
 .kpiItem+.kpiItem{border-left:1px solid var(--border)}
+.kpiItem[style*="cursor"]:active{background:var(--accL)}
 .kpiVal{font-size:20px;font-weight:900;color:var(--acc)}
 .kpiLbl{font-size:10px;color:var(--txt3);font-weight:800;text-transform:uppercase;margin-top:1px}
 
@@ -375,10 +377,10 @@ textarea.inp{resize:vertical;min-height:70px}
 <div class="pg" id="pg-equip">
   <div class="secTitle">📦 Eszközök</div>
   <div class="fTabs" id="eFTabs">
-    <div class="fTab on" onclick="setEF('all',this)">Összes</div>
-    <div class="fTab" onclick="setEF('free',this)">🟢 Szabad</div>
-    <div class="fTab" onclick="setEF('taken',this)">🔴 Foglalt</div>
-    <div class="fTab" onclick="setEF('done',this)">✅ Bepakolva</div>
+    <div class="fTab on" id="ftAll" onclick="setEF('all',this)">Összes</div>
+    <div class="fTab" id="ftFree" onclick="setEF('free',this)">🟢 Szabad</div>
+    <div class="fTab" id="ftTaken" onclick="setEF('taken',this)">🔴 Foglalt</div>
+    <div class="fTab" id="ftDone" onclick="setEF('done',this)">✅ Bepakolva</div>
     <div class="fTab" onclick="setEF('dupe',this)" id="dupeTab">🔁 Dupla</div>
   </div>
   <div id="ePersonFilter" style="margin-bottom:10px"></div>
@@ -893,20 +895,25 @@ function renderHome(){
   const t=S.tour;
   document.getElementById('heroLoc').textContent=t.location.toUpperCase();
   document.getElementById('heroDates').textContent=fmtD(t.start)+' – '+fmtD(t.end);
+  const globalEqCount=S.equipment.filter(e=>!e.day).length;
   document.getElementById('heroMeta').innerHTML=
-    `<div class="tMetaItem">📅 ${t.days.length} nap</div>
-     <div class="tMetaItem">👥 ${S.participants.length} fő</div>
-     <div class="tMetaItem">📦 ${S.equipment.length} eszköz</div>`;
+    `<div class="tMetaItem" style="cursor:pointer" onclick="document.querySelector('[data-pg=home]').click();document.getElementById('daysList').scrollIntoView({behavior:'smooth'})">📅 ${t.days.length} nap</div>
+     <div class="tMetaItem" style="cursor:pointer" onclick="goPage('persons',document.querySelector('[data-pg=persons]'))">👥 ${S.participants.length} fő</div>
+     <div class="tMetaItem" style="cursor:pointer" onclick="goPage('equip',document.querySelector('[data-pg=equip]'))">📦 ${globalEqCount} eszköz</div>`;
 
   // KPI
-  const free=S.equipment.filter(e=>!e.owner).length;
-  const taken=S.equipment.filter(e=>e.owner).length;
-  const done=S.equipment.filter(e=>e.packed).length;
+  const free=S.equipment.filter(e=>!e.owner&&!e.day).length;
+  const taken=S.equipment.filter(e=>e.owner&&!e.day).length;
+  const done=S.equipment.filter(e=>e.packed&&!e.day).length;
   document.getElementById('kpiRow').innerHTML=`
-    <div class="kpiItem"><div class="kpiVal">${taken}</div><div class="kpiLbl">Foglalt</div></div>
-    <div class="kpiItem"><div class="kpiVal">${free}</div><div class="kpiLbl">Szabad</div></div>
-    <div class="kpiItem"><div class="kpiVal">${done}</div><div class="kpiLbl">Kész</div></div>
-    <div class="kpiItem"><div class="kpiVal">${S.participants.length}</div><div class="kpiLbl">Fő</div></div>`;
+    <div class="kpiItem" style="cursor:pointer" onclick="goPage('equip',document.querySelector('[data-pg=equip]'));setTimeout(()=>setEF('taken',document.getElementById('ftTaken')),50)">
+      <div class="kpiVal">${taken}</div><div class="kpiLbl">Foglalt</div></div>
+    <div class="kpiItem" style="cursor:pointer" onclick="goPage('equip',document.querySelector('[data-pg=equip]'));setTimeout(()=>setEF('free',document.getElementById('ftFree')),50)">
+      <div class="kpiVal">${free}</div><div class="kpiLbl">Szabad</div></div>
+    <div class="kpiItem" style="cursor:pointer" onclick="goPage('equip',document.querySelector('[data-pg=equip]'));setTimeout(()=>setEF('done',document.getElementById('ftDone')),50)">
+      <div class="kpiVal">${done}</div><div class="kpiLbl">Kész</div></div>
+    <div class="kpiItem" style="cursor:pointer" onclick="goPage('persons',document.querySelector('[data-pg=persons]'))">
+      <div class="kpiVal">${S.participants.length}</div><div class="kpiLbl">Fő</div></div>`;
 
   renderParticipants();
   renderDays();
