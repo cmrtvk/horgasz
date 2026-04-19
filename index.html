@@ -579,11 +579,13 @@ async function save(){
     }).eq('id', TOUR_ID);
   }
 
-  // Résztvevők szinkronizálása
-  await sb.from('participants').delete().eq('tour_id', TOUR_ID);
-  if(S.participants.length){
-    await sb.from('participants').insert(S.participants.map(name=>({tour_id:TOUR_ID, name})));
-  }
+  // Résztvevők szinkronizálása (FIX)
+await sb.from('participants').upsert(
+  S.participants.map(name => ({
+    tour_id: TOUR_ID,
+    name: name
+  }))
+);
 
  // Eszközök szinkronizálása (FIX)
 await sb.from('equipment').upsert(
@@ -941,7 +943,7 @@ function addDayEquip(d){
   if(!name) return;
   const existing=S.equipment.find(e=>e.name.toLowerCase()===name.toLowerCase()&&e.owner&&e.owner!==who);
   if(existing){alert(`"${name}" már ${existing.owner} eszköze!`);return}
-  S.equipment.push({id:Date.now()+Math.random(),name,owner:who||null,packed:false,day:d});
+  S.equipment.push({id:crypto.randomUUID(),name,owner:who||null,packed:false,day:d});
   document.getElementById('dEqInp-'+d).value='';
   save();
   const deq=document.getElementById('deq-'+d);
@@ -976,7 +978,7 @@ function addEquip(day){
   if(!name){alert('Add meg az eszköz nevét!');return}
   const existing=S.equipment.find(e=>e.name.toLowerCase()===name.toLowerCase()&&e.owner&&e.owner!==who);
   if(existing){alert(`"${name}" már ${existing.owner} eszköze!`);return}
-  S.equipment.push({id:Date.now(),name,owner:who,packed:false,day:day||null});
+  S.equipment.push({id:crypto.randomUUID(),name,owner:who,packed:false,day:day||null});
   save();closeM('mEquip');renderAll();toast('🔒 Eszköz lefoglalva!');
 }
 
@@ -1122,7 +1124,7 @@ function addFoodEquip(d){
   if(!inp||!chef)return;
   const n=inp.value.trim();
   if(!n)return;
-  S.equipment.push({id:Date.now()+Math.random(),name:n,owner:chef,packed:false,day:d});
+ S.equipment.push({id:crypto.randomUUID(),name:n,owner:chef,packed:false,day:d});
   save();inp.value='';renderFoodPage();renderHome();
   const activePg=document.querySelector('.pg.on')?.id?.replace('pg-','');
   if(activePg==='equip')renderEquipPage();
@@ -1237,7 +1239,7 @@ function addEquipForPerson(name){
   if(!n)return;
   const existing=S.equipment.find(e=>e.name.toLowerCase()===n.toLowerCase()&&e.owner&&e.owner!==name);
   if(existing){alert(`"${n}" már ${existing.owner} eszköze!`);return}
-  S.equipment.push({id:Date.now(),name:n,owner:name,packed:false,day:null});
+ S.equipment.push({id:crypto.randomUUID(),name:n,owner:name,packed:false,day:null});
   save();inp.value='';openPersonModal(name);renderAll();toast('📦 Eszköz hozzáadva!');
 }
 
@@ -1277,7 +1279,7 @@ function addEquipFromSummary(name){
   if(!n)return;
   const existing=S.equipment.find(e=>e.name.toLowerCase()===n.toLowerCase()&&e.owner&&e.owner!==name);
   if(existing){alert(`"${n}" már ${existing.owner} eszköze!`);return}
-  S.equipment.push({id:Date.now()+Math.random(),name:n,owner:name,packed:false,day:null});
+S.equipment.push({id:crypto.randomUUID(),name:n,owner:name,packed:false,day:null});
   save();inp.value='';renderSummaryPage();renderHome();
   const activePg=document.querySelector('.pg.on')?.id?.replace('pg-','');
   if(activePg==='equip')renderEquipPage();
