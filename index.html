@@ -28,6 +28,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
 /* HEADER */
 .hdr{background:var(--acc);color:#fff;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;position:sticky;top:0;z-index:200;box-shadow:0 2px 10px rgba(0,0,0,0.25)}
 .hdr-title{font-family:var(--fdis);font-size:26px;letter-spacing:1px;display:flex;align-items:center;gap:7px}
+.syncDot{width:9px;height:9px;border-radius:50%;background:#ff9800;margin-left:4px;flex-shrink:0;transition:background .4s}
 .iBtn{width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,0.18);color:#fff;font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .iBtn:active{background:rgba(255,255,255,0.35)}
 
@@ -221,6 +222,25 @@ textarea.inp{resize:vertical;min-height:70px}
 .dayEquipList{padding-bottom:0}
 
 /* SUMMARY PAGE */
+.progressBar{
+  width:100%;
+  height:14px;
+  background:linear-gradient(
+    90deg,
+    #9e9e9e 0%,
+    #2196f3 33%,
+    #ffeb3b 66%,
+    #4caf50 100%
+  );
+  border-radius:10px;
+  overflow:hidden;
+}
+
+.progressFill{
+  height:100%;
+  background:rgba(0,0,0,0.15); /* halvány sötét overlay */
+  transition:width .4s;
+}
 .sumSection{background:var(--surf);border-radius:var(--r);margin-bottom:12px;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--border)}
 .sumSecHdr{padding:12px 15px;background:var(--surf2);font-family:var(--fdis);font-size:18px;letter-spacing:.5px;color:var(--acc);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
 .sumPersonRow{padding:11px 15px;border-bottom:1px solid var(--border)}
@@ -270,7 +290,7 @@ textarea.inp{resize:vertical;min-height:70px}
 <!-- HEADER -->
 <div class="hdr">
   <button class="iBtn" onclick="document.getElementById('mOvl').classList.add('open')">☰</button>
-  <div class="hdr-title">🎣 HORGÁSZ</div>
+  <div class="hdr-title">🎣 HORGÁSZ <span class="syncDot" id="syncDot" title="Realtime szinkron"></span></div>
   <button class="iBtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
 </div>
 
@@ -485,19 +505,167 @@ textarea.inp{resize:vertical;min-height:70px}
   <button class="bItem" data-pg="summary" onclick="goPage('summary',this)"><div class="bi">📋</div><div class="bl">Összesítő</div></button>
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ========== CONSTANTS (must be first!) ==========
 const DNAMES=['Vasárnap','Hétfő','Kedd','Szerda','Csütörtök','Péntek','Szombat'];
 
+// ========== SUPABASE ==========
+const SUPA_URL = 'https://mwejiodxoffymjboihyd.supabase.co';
+const SUPA_KEY = 'sb_publishable_FXTFut_o1iQ2badLfwC9PA_rda1AA_9';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
 // ========== STATE ==========
 let S = { tour:null, participants:[], equipment:[], foods:[], theme:'light', collapsedDays:{} };
 let eFilter='all', infoDay=null;
+let TOUR_ID = null; // aktív tour UUID a Supabase-ben
+let _syncLock = false; // realtime loop megakadályozása
 
-function save(){localStorage.setItem('horgasz2',JSON.stringify(S))}
-function load(){try{const d=localStorage.getItem('horgasz2');if(d){const p=JSON.parse(d);S={...S,...p};if(!S.collapsedDays)S.collapsedDays={}}}catch(e){}}
+// ========== SUPABASE LOAD ==========
+async function load(){
+  // Téma localStorage-ból
+  try{ const t=localStorage.getItem('horgasz_theme'); if(t) S.theme=t; }catch(e){}
+
+  // Legfrissebb túra betöltése
+  const {data:tours} = await sb.from('tours').select('*').order('created_at',{ascending:false}).limit(1);
+  if(!tours||!tours.length){ applyTheme(); renderAll(); initRealtime(); return; }
+
+  const tour = tours[0];
+  TOUR_ID = tour.id;
+  S.tour = { location:tour.location, start:tour.start_date, end:tour.end_date, days:tour.days||[] };
+  S.collapsedDays = tour.collapsed_days||{};
+
+  // Résztvevők
+  const {data:parts} = await sb.from('participants').select('name').eq('tour_id',TOUR_ID).order('created_at');
+  S.participants = (parts||[]).map(p=>p.name);
+
+  // Eszközök
+  const {data:equip} = await sb.from('equipment').select('*').eq('tour_id',TOUR_ID).order('created_at');
+  S.equipment = (equip||[]).map(e=>({id:e.id, name:e.name, owner:e.owner, packed:e.packed, day:e.day}));
+
+  // Ételek
+  const {data:foods} = await sb.from('foods').select('*').eq('tour_id',TOUR_ID).order('created_at');
+  S.foods = (foods||[]).map(f=>({id:f.id, day:f.day, menu:f.menu, chef:f.chef, ingredients:f.ingredients||[]}));
+
+  applyTheme(); renderAll(); initRealtime();
+}
+
+// ========== SUPABASE SAVE ==========
+async function save(){
+  localStorage.setItem('horgasz_theme', S.theme);
+  if(_syncLock) return;
+  if(!S.tour) return;
+
+  if(!TOUR_ID){
+    // Új túra létrehozása
+    const {data, error} = await sb.from('tours').insert({
+      location: S.tour.location,
+      start_date: S.tour.start,
+      end_date: S.tour.end,
+      days: S.tour.days,
+      theme: S.theme,
+      collapsed_days: S.collapsedDays
+    }).select().single();
+    if(error){ console.error('Tour insert error:', error); return; }
+    TOUR_ID = data.id;
+  } else {
+    await sb.from('tours').update({
+      location: S.tour.location,
+      start_date: S.tour.start,
+      end_date: S.tour.end,
+      days: S.tour.days,
+      theme: S.theme,
+      collapsed_days: S.collapsedDays
+    }).eq('id', TOUR_ID);
+  }
+
+  // Résztvevők szinkronizálása
+  await sb.from('participants').delete().eq('tour_id', TOUR_ID);
+  if(S.participants.length){
+    await sb.from('participants').insert(S.participants.map(name=>({tour_id:TOUR_ID, name})));
+  }
+
+  // Eszközök szinkronizálása (UUID-s itemek csak updateljük, újakat inserteljük)
+  await sb.from('equipment').delete().eq('tour_id', TOUR_ID);
+  if(S.equipment.length){
+    await sb.from('equipment').insert(S.equipment.map(e=>({
+      tour_id: TOUR_ID,
+      name: e.name,
+      owner: e.owner||null,
+      packed: !!e.packed,
+      day: e.day||null
+    })));
+  }
+
+  // Ételek szinkronizálása
+  await sb.from('foods').delete().eq('tour_id', TOUR_ID);
+  if(S.foods.length){
+    await sb.from('foods').insert(S.foods.map(f=>({
+      tour_id: TOUR_ID,
+      day: f.day,
+      menu: f.menu,
+      chef: f.chef||null,
+      ingredients: f.ingredients||[]
+    })));
+  }
+}
+
+// ========== TÖRLÉS - tour ==========
+async function deleteTourFromDB(){
+  if(TOUR_ID){
+    await sb.from('tours').delete().eq('id', TOUR_ID);
+    TOUR_ID = null;
+  }
+}
+
+// ========== REALTIME ==========
+function initRealtime(){
+  // Összes releváns tábla figyelése
+  const channel = sb.channel('horgasz-realtime')
+    .on('postgres_changes', {event:'*', schema:'public', table:'tours'}, handleRemoteChange)
+    .on('postgres_changes', {event:'*', schema:'public', table:'participants'}, handleRemoteChange)
+    .on('postgres_changes', {event:'*', schema:'public', table:'equipment'}, handleRemoteChange)
+    .on('postgres_changes', {event:'*', schema:'public', table:'foods'}, handleRemoteChange)
+    .subscribe((status)=>{
+      const dot = document.getElementById('syncDot');
+      if(dot) dot.style.background = status==='SUBSCRIBED' ? '#4caf50' : '#ff9800';
+    });
+}
+
+async function handleRemoteChange(){
+  // Kis delay hogy a write tranzakció befejezzen
+  await new Promise(r=>setTimeout(r,300));
+  _syncLock = true;
+  await reloadFromDB();
+  _syncLock = false;
+}
+
+async function reloadFromDB(){
+  if(!TOUR_ID) return;
+
+  const [{data:tours},{data:parts},{data:equip},{data:foods}] = await Promise.all([
+    sb.from('tours').select('*').eq('id',TOUR_ID).single(),
+    sb.from('participants').select('name').eq('tour_id',TOUR_ID).order('created_at'),
+    sb.from('equipment').select('*').eq('tour_id',TOUR_ID).order('created_at'),
+    sb.from('foods').select('*').eq('tour_id',TOUR_ID).order('created_at')
+  ]);
+
+  if(tours){
+    S.tour = { location:tours.location, start:tours.start_date, end:tours.end_date, days:tours.days||[] };
+    S.collapsedDays = tours.collapsed_days||{};
+  }
+  S.participants = (parts||[]).map(p=>p.name);
+  S.equipment = (equip||[]).map(e=>({id:e.id, name:e.name, owner:e.owner, packed:e.packed, day:e.day}));
+  S.foods = (foods||[]).map(f=>({id:f.id, day:f.day, menu:f.menu, chef:f.chef, ingredients:f.ingredients||[]}));
+
+  renderAll();
+  toast('🔄 Frissítve másik eszközről!');
+}
 
 // ========== BOOT ==========
-load(); applyTheme(); renderAll();
+// Szinkron indítás, majd async load
+applyTheme();
+load();
 
 // ========== TOAST ==========
 function toast(msg){
@@ -547,22 +715,29 @@ function renderAll(){
 }
 
 // ========== TOUR ==========
-function createTour(){
+async function createTour(){
   const loc=document.getElementById('tLoc').value.trim();
   const s=document.getElementById('tStart').value;
   const e=document.getElementById('tEnd').value;
   if(!loc||!s||!e){alert('Töltsd ki az összes mezőt!');return}
   if(s>e){alert('A kezdő dátum nem lehet a záró után!');return}
   S.tour={location:loc,start:s,end:e,days:genDays(s,e)};
+  S.participants=[];S.equipment=[];S.foods=[];
   S.collapsedDays={};
-  save();renderHome();
+  TOUR_ID=null; // force insert
+  await save();renderHome();toast('✅ Túra létrehozva!');
 }
 function genDays(s,e){
   const days=[],cur=new Date(s),end=new Date(e);
   while(cur<=end){days.push(cur.toISOString().split('T')[0]);cur.setDate(cur.getDate()+1)}
   return days;
 }
-function deleteTour(){S.tour=null;S.equipment=[];S.foods=[];S.participants=[];S.collapsedDays={};save();renderHome()}
+async function deleteTour(){
+  if(!confirm('Törlöd az egész túrát?'))return;
+  await deleteTourFromDB();
+  S.tour=null;S.equipment=[];S.foods=[];S.participants=[];S.collapsedDays={};
+  renderHome();toast('🗑️ Túra törölve');
+}
 
 function openEditTour(){
   document.getElementById('etLoc').value=S.tour.location;
@@ -570,14 +745,14 @@ function openEditTour(){
   document.getElementById('etEnd').value=S.tour.end;
   openM('mEditTour');
 }
-function saveEditTour(){
+async function saveEditTour(){
   const loc=document.getElementById('etLoc').value.trim();
   const s=document.getElementById('etStart').value;
   const e=document.getElementById('etEnd').value;
   if(!loc||!s||!e){alert('Töltsd ki az összes mezőt!');return}
   if(s>e){alert('A kezdő nem lehet a záró után!');return}
   S.tour.location=loc;S.tour.start=s;S.tour.end=e;S.tour.days=genDays(s,e);
-  save();closeM('mEditTour');renderHome();toast('✅ Túra frissítve!');
+  await save();closeM('mEditTour');renderHome();toast('✅ Túra frissítve!');
 }
 
 // ========== HOME RENDER ==========
@@ -1219,8 +1394,8 @@ function renderSummaryPage(){
         <span style="font-size:14px;font-weight:800;color:var(--txt2)">Bepakolás haladása</span>
         <span style="font-size:14px;font-weight:900;color:var(--acc)">${packedEq}/${totalEq} (${pct}%)</span>
       </div>
-      <div style="height:10px;background:var(--border);border-radius:10px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:var(--acc);border-radius:10px;transition:width .4s"></div>
+      <div class="progressBar"><div class="progressFill" style="width:${pct}%"></div>
+        
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         <span class="bdg bTaken">📦 ${totalEq} eszköz</span>
@@ -1318,7 +1493,7 @@ function fishBans(m){
 function fmtD(d){return new Date(d).toLocaleDateString('hu-HU',{month:'short',day:'numeric'})}
 function pad(n){return String(n).padStart(2,'0')}
 function esc(s){return(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}
-function resetAll(){S={tour:null,participants:[],equipment:[],foods:[],theme:S.theme,collapsedDays:{}};save();renderAll()}
+async function resetAll(){await deleteTourFromDB();S={tour:null,participants:[],equipment:[],foods:[],theme:S.theme,collapsedDays:{}};renderAll();toast('🗑️ Minden törölve');}
 </script>
 </body>
 </html>
