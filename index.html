@@ -579,25 +579,24 @@ async function save(){
     }).eq('id', TOUR_ID);
   }
 
-  // Résztvevők szinkronizálása (FIX)
-await sb.from('participants').upsert(
-  S.participants.map(name => ({
-    tour_id: TOUR_ID,
-    name: name
-  }))
-);
+  // Résztvevők szinkronizálása
+  await sb.from('participants').delete().eq('tour_id', TOUR_ID);
+  if(S.participants.length){
+    await sb.from('participants').insert(S.participants.map(name=>({tour_id:TOUR_ID, name})));
+  }
 
- // Eszközök szinkronizálása (FIX)
-await sb.from('equipment').upsert(
-  S.equipment.map(e => ({
-    id: e.id,
-    tour_id: TOUR_ID,
-    name: e.name,
-    owner: e.owner || null,
-    packed: !!e.packed,
-    day: e.day || null
-  }))
-);
+  // Eszközök szinkronizálása (UUID-s itemek csak updateljük, újakat inserteljük)
+  await sb.from('equipment').delete().eq('tour_id', TOUR_ID);
+  if(S.equipment.length){
+    await sb.from('equipment').insert(S.equipment.map(e=>({
+      tour_id: TOUR_ID,
+      name: e.name,
+      owner: e.owner||null,
+      packed: !!e.packed,
+      day: e.day||null
+    })));
+  }
+
   // Ételek szinkronizálása
   await sb.from('foods').delete().eq('tour_id', TOUR_ID);
   if(S.foods.length){
@@ -912,24 +911,18 @@ function renderDays(){
 function renderDayEquipItems(d){
   const items=S.equipment.filter(e=>e.day===d);
   if(!items.length) return '<div style="font-size:13px;color:var(--txt3);padding:10px 15px">Még nincs eszköz ehhez a naphoz</div>';
- return items.map(e=>`
-  <div class="eRow" id="er-${e.id}">
-    <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked('${e.id}','day','${d}')">${e.packed?'✓':''}</div>
-    <div style="flex:1">
-      <div class="eName ${e.packed?'done':''}">${e.name}</div>
-      <div class="eOwner">
-        <span class="bdg ${e.owner?'bTaken':'bFree'}">
-          ${e.owner?'🔒 '+e.owner:'🟢 Szabad'}
-        </span>
-        ${e.packed?'<span class="bdg bDone" style="margin-left:4px">✅</span>':''}
+  return items.map(e=>`
+    <div class="eRow" id="er-${e.id}">
+      <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked(${e.id},'day','${d}')">${e.packed?'✓':''}</div>
+      <div style="flex:1">
+        <div class="eName ${e.packed?'done':''}">${e.name}</div>
+        <div class="eOwner"><span class="bdg ${e.owner?'bTaken':'bFree'}">${e.owner?'🔒 '+e.owner:'🟢 Szabad'}</span>${e.packed?'<span class="bdg bDone" style="margin-left:4px">✅</span>':''}</div>
       </div>
-    </div>
-    <div class="eActions">
-      <button class="btn btnXs btnS" onclick="openEqEdit('${e.id}')">✏️</button>
-      <button class="btn btnXs btnD" onclick="deleteEq('${e.id}','day','${d}')">✕</button>
-    </div>
-  </div>
-`).join('');
+      <div class="eActions">
+        <button class="btn btnXs btnS" onclick="openEqEdit(${e.id})">✏️</button>
+        <button class="btn btnXs btnD" onclick="deleteEq(${e.id},'day','${d}')">✕</button>
+      </div>
+    </div>`).join('');
 }
 
 function dayEqAC(d){
@@ -949,7 +942,7 @@ function addDayEquip(d){
   if(!name) return;
   const existing=S.equipment.find(e=>e.name.toLowerCase()===name.toLowerCase()&&e.owner&&e.owner!==who);
   if(existing){alert(`"${name}" már ${existing.owner} eszköze!`);return}
-  S.equipment.push({id:crypto.randomUUID(),name,owner:who||null,packed:false,day:d});
+  S.equipment.push({id:Date.now()+Math.random(),name,owner:who||null,packed:false,day:d});
   document.getElementById('dEqInp-'+d).value='';
   save();
   const deq=document.getElementById('deq-'+d);
@@ -984,7 +977,7 @@ function addEquip(day){
   if(!name){alert('Add meg az eszköz nevét!');return}
   const existing=S.equipment.find(e=>e.name.toLowerCase()===name.toLowerCase()&&e.owner&&e.owner!==who);
   if(existing){alert(`"${name}" már ${existing.owner} eszköze!`);return}
-  S.equipment.push({id:crypto.randomUUID(),name,owner:who,packed:false,day:day||null});
+  S.equipment.push({id:Date.now(),name,owner:who,packed:false,day:day||null});
   save();closeM('mEquip');renderAll();toast('🔒 Eszköz lefoglalva!');
 }
 
@@ -1076,7 +1069,7 @@ function renderEquipPage(){
   }
   el.innerHTML=`<div class="card" style="padding:0">`+list.map(e=>`
     <div class="eRow">
-      <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked('${e.id}','page',null)">${e.packed?'✓':''}</div>
+      <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked(${e.id},'page',null)">${e.packed?'✓':''}</div>
       <div style="flex:1">
         <div class="eName ${e.packed?'done':''}">${e.name}</div>
         <div class="eOwner">
@@ -1130,7 +1123,7 @@ function addFoodEquip(d){
   if(!inp||!chef)return;
   const n=inp.value.trim();
   if(!n)return;
- S.equipment.push({id:crypto.randomUUID(),name:n,owner:chef,packed:false,day:d});
+  S.equipment.push({id:Date.now()+Math.random(),name:n,owner:chef,packed:false,day:d});
   save();inp.value='';renderFoodPage();renderHome();
   const activePg=document.querySelector('.pg.on')?.id?.replace('pg-','');
   if(activePg==='equip')renderEquipPage();
@@ -1170,7 +1163,7 @@ function renderFoodPage(){
         ${dayEquip.length?`<div style="display:flex;flex-direction:column;gap:0;margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid var(--border)">
           ${dayEquip.map(e=>`
           <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surf);border-bottom:1px solid var(--border)">
-            <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked('${e.id}','food','${d}')" style="width:26px;height:26px;font-size:13px">${e.packed?'✓':''}</div>
+            <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked(${e.id},'food','${d}')" style="width:26px;height:26px;font-size:13px">${e.packed?'✓':''}</div>
             <div class="eName ${e.packed?'done':''}" style="flex:1;font-size:14px">${e.name}</div>
             ${e.packed?'<span class="bdg bDone" style="font-size:11px">✅</span>':'<span class="bdg bWarn" style="font-size:11px">⏳</span>'}
             <button class="btn btnXs btnS" onclick="openEqEdit(${e.id})">✏️</button>
@@ -1209,7 +1202,7 @@ function openPersonModal(name){
     <div style="font-size:13px;font-weight:800;color:var(--txt2);margin-bottom:8px">📦 ESZKÖZEI</div>
     ${myEquip.length?myEquip.map(e=>`
       <div class="eRow" style="padding:9px 0;border-bottom:1px solid var(--border)">
-        <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked('${e.id}','modal',null);openPersonModal('${esc(name)}')">${e.packed?'✓':''}</div>
+        <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked(${e.id},'modal',null);openPersonModal('${esc(name)}')">${e.packed?'✓':''}</div>
         <div style="flex:1">
           <div class="eName ${e.packed?'done':''}">${e.name}</div>
           ${e.day?`<div style="font-size:11px;color:var(--txt3)">📅 ${fmtD(e.day)}</div>`:''}
@@ -1245,7 +1238,7 @@ function addEquipForPerson(name){
   if(!n)return;
   const existing=S.equipment.find(e=>e.name.toLowerCase()===n.toLowerCase()&&e.owner&&e.owner!==name);
   if(existing){alert(`"${n}" már ${existing.owner} eszköze!`);return}
- S.equipment.push({id:crypto.randomUUID(),name:n,owner:name,packed:false,day:null});
+  S.equipment.push({id:Date.now(),name:n,owner:name,packed:false,day:null});
   save();inp.value='';openPersonModal(name);renderAll();toast('📦 Eszköz hozzáadva!');
 }
 
@@ -1285,7 +1278,7 @@ function addEquipFromSummary(name){
   if(!n)return;
   const existing=S.equipment.find(e=>e.name.toLowerCase()===n.toLowerCase()&&e.owner&&e.owner!==name);
   if(existing){alert(`"${n}" már ${existing.owner} eszköze!`);return}
-S.equipment.push({id:crypto.randomUUID(),name:n,owner:name,packed:false,day:null});
+  S.equipment.push({id:Date.now()+Math.random(),name:n,owner:name,packed:false,day:null});
   save();inp.value='';renderSummaryPage();renderHome();
   const activePg=document.querySelector('.pg.on')?.id?.replace('pg-','');
   if(activePg==='equip')renderEquipPage();
