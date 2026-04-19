@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🎣 Horgász Túra</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#eef4ee;--surf:#fff;--surf2:#f5faf5;--border:rgba(0,0,0,0.09);
+  --txt:#192e19;--txt2:#4a6e4a;--txt3:#8aaa8a;
+  --acc:#2a7a2a;--acc2:#43a843;--accL:#e6f4e6;
+  --red:#c0392b;--redL:#fdecea;--ora:#e67e22;--oraL:#fef3e2;
+  --blu:#1565c0;--bluL:#e3f2fd;--yel:#f9a825;--yelL:#fffde7;
+  --sh:0 2px 16px rgba(0,0,0,0.08);--r:14px;--rs:8px;
+  --font:'Nunito',sans-serif;--fdis:'Bebas Neue',sans-serif;
+}
+[data-theme=dark]{
+  --bg:#0c1a0c;--surf:#172917;--surf2:#122012;--border:rgba(255,255,255,0.08);
+  --txt:#e8f5e8;--txt2:#a0c8a0;--txt3:#5a8a5a;
+  --acc:#5cb85c;--acc2:#76c876;--accL:#1a2e1a;
+  --red:#ef5350;--redL:#2d1515;--ora:#ffa726;--oraL:#2d200d;
+  --blu:#42a5f5;--bluL:#0d1e2d;--yel:#ffca28;--yelL:#2d2508;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden}
+
+/* HEADER */
+.hdr{background:var(--acc);color:#fff;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;position:sticky;top:0;z-index:200;box-shadow:0 2px 10px rgba(0,0,0,0.25)}
+.hdr-title{font-family:var(--fdis);font-size:26px;letter-spacing:1px;display:flex;align-items:center;gap:7px}
+.iBtn{width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,0.18);color:#fff;font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.iBtn:active{background:rgba(255,255,255,0.35)}
+
+/* SLIDE MENU */
+.mOvl{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;opacity:0;pointer-events:none;transition:opacity .25s}
+.mOvl.open{opacity:1;pointer-events:all}
+.mPanel{position:fixed;left:0;top:0;bottom:0;width:270px;background:var(--surf);transform:translateX(-100%);transition:transform .3s;overflow-y:auto}
+.mOvl.open .mPanel{transform:translateX(0)}
+.mHdr{background:var(--acc);padding:20px 16px 14px;color:#fff}
+.mHdr h2{font-family:var(--fdis);font-size:26px;letter-spacing:1px}
+.mSec{padding:8px 14px 2px;font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:1px;margin-top:6px}
+.mItem{display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;font-size:15px;font-weight:700;color:var(--txt)}
+.mItem:active{background:var(--surf2)}
+.mItem .ic{font-size:19px;width:28px;text-align:center}
+
+/* BOTTOM NAV */
+.bNav{position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-top:1px solid var(--border);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom,0px)}
+.bItem{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 4px 6px;cursor:pointer;color:var(--txt3);transition:color .18s;gap:2px;border:none;background:none;font-family:var(--font)}
+.bItem.on{color:var(--acc)}
+.bItem .bi{font-size:22px}
+.bItem .bl{font-size:10px;font-weight:800;letter-spacing:.3px}
+
+/* PAGES */
+.pg{display:none;padding:14px 14px 80px}
+.pg.on{display:block}
+
+/* CARDS */
+.card{background:var(--surf);border-radius:var(--r);padding:15px;margin-bottom:11px;box-shadow:var(--sh);border:1px solid var(--border)}
+.cHdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.cTitle{font-size:13px;font-weight:800;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 18px;border-radius:var(--rs);border:none;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;transition:all .18s;width:100%}
+.btn:active{transform:scale(.97)}
+.btnP{background:var(--acc);color:#fff}
+.btnS{background:var(--surf2);color:var(--txt);border:1px solid var(--border)}
+.btnD{background:var(--red);color:#fff}
+.btnO{background:var(--oraL);color:var(--ora);border:1px solid var(--ora)}
+.btnB{background:var(--bluL);color:var(--blu);border:1px solid var(--blu)}
+.btnSm{padding:6px 12px;font-size:13px;width:auto;border-radius:6px}
+.btnXs{padding:4px 9px;font-size:12px;width:auto;border-radius:5px}
+.btnRow{display:flex;gap:8px;margin-top:10px}
+.btnRow .btn{flex:1}
+
+/* INPUTS */
+.iGrp{margin-bottom:11px}
+.iLbl{font-size:13px;font-weight:800;color:var(--txt2);margin-bottom:4px;display:block}
+.inp{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:var(--rs);background:var(--surf2);color:var(--txt);font-family:var(--font);font-size:15px;outline:none;transition:border-color .18s}
+.inp:focus{border-color:var(--acc)}
+select.inp{cursor:pointer}
+textarea.inp{resize:vertical;min-height:70px}
+
+/* BADGES */
+.bdg{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:800}
+.bFree{background:var(--accL);color:var(--acc)}
+.bTaken{background:var(--redL);color:var(--red)}
+.bDone{background:#e8f5e9;color:#2e7d32}
+.bWarn{background:var(--oraL);color:var(--ora)}
+.bBlu{background:var(--bluL);color:var(--blu)}
+
+/* MODAL (bottom sheet) */
+.mBd{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .22s}
+.mBd.open{opacity:1;pointer-events:all}
+.mSheet{background:var(--surf);border-radius:22px 22px 0 0;padding:18px 16px 30px;width:100%;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .28s cubic-bezier(.32,.72,0,1)}
+.mBd.open .mSheet{transform:translateY(0)}
+.mHandle{width:38px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 14px}
+.mTitle{font-family:var(--fdis);font-size:23px;letter-spacing:.5px;margin-bottom:14px;color:var(--txt)}
+.mClose{position:absolute;top:14px;right:16px;width:34px;height:34px;border-radius:50%;border:none;background:var(--surf2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2)}
+
+/* AUTOCOMPLETE */
+.acWrap{position:relative}
+.acList{position:absolute;top:100%;left:0;right:0;background:var(--surf);border:1.5px solid var(--acc);border-top:none;border-radius:0 0 var(--rs) var(--rs);z-index:10;max-height:150px;overflow-y:auto;display:none}
+.acList.show{display:block}
+.acItem{padding:10px 13px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--border)}
+.acItem:active{background:var(--surf2)}
+
+/* TOUR HERO */
+.tHero{background:linear-gradient(135deg,var(--acc) 0%,#1b5e20 100%);border-radius:var(--r);padding:18px;color:#fff;margin-bottom:13px;position:relative;overflow:hidden}
+.tHero::before{content:'🎣';position:absolute;right:-8px;bottom:-8px;font-size:75px;opacity:.12;transform:rotate(-20deg);pointer-events:none}
+.tHero h2{font-family:var(--fdis);font-size:28px;letter-spacing:1px;margin-bottom:3px}
+.tHero p{font-size:13px;opacity:.85}
+.tMeta{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
+.tMetaItem{background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:800}
+
+/* KPI */
+.kpiRow{display:flex;gap:0}
+.kpiItem{flex:1;text-align:center;padding:11px 4px}
+.kpiItem+.kpiItem{border-left:1px solid var(--border)}
+.kpiVal{font-size:20px;font-weight:900;color:var(--acc)}
+.kpiLbl{font-size:10px;color:var(--txt3);font-weight:800;text-transform:uppercase;margin-top:1px}
+
+/* DAY CARD - COLLAPSIBLE */
+.dayCard{background:var(--surf);border-radius:var(--r);margin-bottom:12px;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--border)}
+.dayHdr{padding:13px 15px;background:var(--surf2);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+.dayHdr:active{background:var(--accL)}
+.dayDate{font-family:var(--fdis);font-size:22px;color:var(--acc);letter-spacing:.5px}
+.dayName{font-size:11px;color:var(--txt3);font-weight:800;text-transform:uppercase;margin-top:1px}
+.dayBtns{display:flex;gap:6px;align-items:center}
+.dBtn{padding:6px 12px;border-radius:6px;border:none;font-family:var(--font);font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:4px}
+.dBtnF{background:var(--oraL);color:var(--ora)}
+.dBtnI{background:var(--bluL);color:var(--blu)}
+.dayBody{padding:0}
+.dayCollapse{transition:max-height .3s ease,opacity .25s;overflow:hidden;max-height:2000px;opacity:1}
+.dayCollapse.collapsed{max-height:0;opacity:0}
+.collapseChevron{font-size:14px;color:var(--txt3);transition:transform .25s;margin-left:6px;flex-shrink:0}
+.collapseChevron.open{transform:rotate(180deg)}
+
+/* PARTICIPANT PILL */
+.pPill{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;background:var(--surf2);border:1.5px solid var(--border);margin:4px;font-size:14px;font-weight:800;cursor:pointer;transition:all .18s;position:relative}
+.pPill:active,.pPill:hover{background:var(--accL);border-color:var(--acc);color:var(--acc)}
+.pPill .pDel{font-size:13px;color:var(--txt3);margin-left:3px;line-height:1}
+.pPill .pEdit{font-size:11px;color:var(--txt3);margin-left:2px}
+
+/* EQUIPMENT ROW */
+.eRow{display:flex;align-items:center;gap:10px;padding:11px 15px;border-bottom:1px solid var(--border)}
+.eRow:last-child{border-bottom:none}
+.eCheck{width:30px;height:30px;border-radius:50%;border:2px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s;flex-shrink:0}
+.eCheck.done{background:var(--acc);border-color:var(--acc);color:#fff}
+.eName{flex:1;font-size:14px;font-weight:700}
+.eName.done{text-decoration:line-through;color:var(--txt3)}
+.eOwner{font-size:12px;font-weight:800}
+.eActions{display:flex;gap:5px}
+
+/* FOOD BLOCK */
+.foodBlock{padding:12px 15px;background:var(--oraL);border-top:1px solid var(--border)}
+.fMenu{font-size:16px;font-weight:900;color:var(--txt);margin-bottom:3px}
+.fChef{font-size:12px;font-weight:800;color:var(--ora);margin-bottom:6px}
+.fIngs{display:flex;flex-wrap:wrap;gap:4px}
+.fIng{background:rgba(255,255,255,.75);padding:3px 9px;border-radius:20px;font-size:12px;font-weight:700;color:var(--txt)}
+
+/* EQUIP SECTION inside day */
+.dayEquipSec{padding:0}
+.dayEquipAdd{display:flex;align-items:center;gap:8px;padding:10px 15px;border-top:1px solid var(--border)}
+
+/* PERSON CARD */
+.persCard{background:var(--surf);border-radius:var(--r);margin-bottom:10px;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--border)}
+.persHdr{display:flex;align-items:center;gap:11px;padding:13px 15px;cursor:pointer;background:var(--surf2);border-bottom:1px solid var(--border)}
+.persAv{width:40px;height:40px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;flex-shrink:0}
+.persName{flex:1;font-size:17px;font-weight:900}
+.persBody{padding:13px 15px}
+
+/* INFO BLOCK */
+.infoBlk{background:var(--bluL);border-radius:var(--rs);padding:13px;border-left:4px solid var(--blu);margin-bottom:10px}
+.iRow{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:14px}
+.iRow:last-child{border-bottom:none}
+.iKey{color:var(--txt2);font-weight:800}
+.iVal{color:var(--txt);font-weight:900}
+
+/* FILTER TABS */
+.fTabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;margin-bottom:11px;scrollbar-width:none}
+.fTabs::-webkit-scrollbar{display:none}
+.fTab{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--surf);font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;color:var(--txt2);flex-shrink:0}
+.fTab.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+
+/* EMPTY */
+.empty{text-align:center;padding:35px 16px}
+.emptyIc{font-size:44px;margin-bottom:10px}
+.emptyTxt{color:var(--txt3);font-size:14px;line-height:1.5}
+
+/* DIVIDER */
+.div{height:1px;background:var(--border);margin:11px 0}
+
+.secTitle{font-family:var(--fdis);font-size:21px;color:var(--txt);margin-bottom:11px;letter-spacing:.5px;display:flex;align-items:center;gap:7px}
+
+.fadeIn{animation:fIn .25s ease}
+@keyframes fIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+
+.weatherBig{font-size:50px;font-family:var(--fdis);color:var(--acc);letter-spacing:2px}
+.solRating{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:20px;font-size:14px;font-weight:800}
+.solJ{background:#e8f5e9;color:#2e7d32}.solK{background:var(--oraL);color:var(--ora)}.solR{background:var(--redL);color:var(--red)}
+
+.inline-edit{display:inline-flex;align-items:center;gap:6px;cursor:pointer;border-bottom:1.5px dashed var(--txt3)}
+.inline-edit:hover{border-color:var(--acc);color:var(--acc)}
+
+.tag{background:var(--accL);color:var(--acc);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800}
+
+/* Day equip inline add */
+.eAddRow{display:flex;gap:7px;padding:10px 14px;border-top:1px solid var(--border);background:var(--surf2)}
+.eAddRow .acWrap{flex:1}
+.eAddRow select{width:120px;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;background:var(--surf2);color:var(--txt);font-family:var(--font);font-size:13px;outline:none}
+.eAddRow .inp{padding:8px 11px;font-size:14px}
+
+.noTour{background:linear-gradient(135deg,var(--acc),#1b5e20);border-radius:var(--r);padding:28px 20px;color:#fff;text-align:center;margin-bottom:14px}
+.noTour .big{font-size:60px;margin-bottom:12px}
+.noTour h2{font-family:var(--fdis);font-size:30px;letter-spacing:1px;margin-bottom:6px}
+.noTour p{font-size:14px;opacity:.85;line-height:1.5}
+
+.editIcon{font-size:14px;cursor:pointer;opacity:.5;margin-left:5px;vertical-align:middle}
+.editIcon:hover{opacity:1}
+
+.dayEquipList{padding-bottom:0}
+
+/* SUMMARY PAGE */
+.sumSection{background:var(--surf);border-radius:var(--r);margin-bottom:12px;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--border)}
+.sumSecHdr{padding:12px 15px;background:var(--surf2);font-family:var(--fdis);font-size:18px;letter-spacing:.5px;color:var(--acc);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sumPersonRow{padding:11px 15px;border-bottom:1px solid var(--border)}
+.sumPersonRow:last-child{border-bottom:none}
+.sumPersonName{font-size:15px;font-weight:900;margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.sumPersonAv{width:28px;height:28px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0}
+.sumTags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.sumTag{padding:3px 9px;border-radius:20px;font-size:12px;font-weight:700}
+.sumTagEq{background:var(--bluL);color:var(--blu)}
+.sumTagFood{background:var(--oraL);color:var(--ora)}
+.sumTagDone{background:#e8f5e9;color:#2e7d32;text-decoration:line-through}
+
+/* INLINE EDIT field */
+.inlineEditField{display:inline-block;border:none;background:transparent;font-family:var(--font);font-size:inherit;font-weight:inherit;color:inherit;outline:none;border-bottom:2px dashed var(--txt3);min-width:60px;max-width:180px}
+.inlineEditField:focus{border-color:var(--acc)}
+
+/* TOAST */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--txt);color:var(--bg);padding:10px 20px;border-radius:30px;font-size:14px;font-weight:800;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Day summary mini badge */
+.daySummBadge{font-size:11px;font-weight:800;color:var(--txt3);margin-left:4px}
+
+/* Edit name in participant list */
+.partEditModal input{font-size:17px}
+</style>
+</head>
+<body data-theme="light">
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MENU -->
+<div class="mOvl" id="mOvl" onclick="closeMOvl(event)">
+  <div class="mPanel">
+    <div class="mHdr"><h2>🎣 HORGÁSZ</h2><div style="font-size:13px;opacity:.8;margin-top:3px">Túra Szervező</div></div>
+    <div class="mSec">Téma</div>
+    <div class="mItem" onclick="toggleTheme();closeMOvl()"><span class="ic" id="mThemeIc">🌙</span><span id="mThemeLbl">Éjszakai mód</span></div>
+    <div class="mSec">Napok</div>
+    <div class="mItem" onclick="toggleAllDays(true);closeMOvl()"><span class="ic">➕</span>Összes nap kinyitása</div>
+    <div class="mItem" onclick="toggleAllDays(false);closeMOvl()"><span class="ic">➖</span>Összes nap becsukása</div>
+    <div class="mSec">Adat</div>
+    <div class="mItem" onclick="if(confirm('Törlöd az összes adatot?')){resetAll();closeMOvl()}"><span class="ic">🗑️</span>Összes adat törlése</div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <button class="iBtn" onclick="document.getElementById('mOvl').classList.add('open')">☰</button>
+  <div class="hdr-title">🎣 HORGÁSZ</div>
+  <button class="iBtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+</div>
+
+<!-- ===== PAGE: FŐOLDAL ===== -->
+<div class="pg on" id="pg-home">
+
+  <!-- NO TOUR -->
+  <div id="noTourDiv">
+    <div class="noTour">
+      <div class="big">🎣</div>
+      <h2>ÚJ TÚRA</h2>
+      <p>Hozd létre az első horgásztúrádat!</p>
+    </div>
+    <div class="card">
+      <div class="iGrp"><label class="iLbl">🗺️ Helyszín</label><input class="inp" id="tLoc" placeholder="pl. Tisza-tó, Kisköre"></div>
+      <div class="iGrp"><label class="iLbl">📅 Kezdő dátum</label><input class="inp" type="date" id="tStart"></div>
+      <div class="iGrp"><label class="iLbl">📅 Záró dátum</label><input class="inp" type="date" id="tEnd"></div>
+      <button class="btn btnP" onclick="createTour()">🚀 Túra létrehozása</button>
+    </div>
+  </div>
+
+  <!-- ACTIVE TOUR -->
+  <div id="activeTourDiv" style="display:none">
+
+    <!-- Hero -->
+    <div class="tHero" id="heroDiv">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div>
+          <h2 id="heroLoc"></h2>
+          <p id="heroDates"></p>
+          <div class="tMeta" id="heroMeta"></div>
+        </div>
+        <button class="iBtn" style="background:rgba(255,255,255,.2);flex-shrink:0" onclick="openEditTour()">✏️</button>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="card" style="padding:0;margin-bottom:11px">
+      <div class="kpiRow" id="kpiRow"></div>
+    </div>
+
+    <!-- Résztvevők -->
+    <div class="card">
+      <div class="cHdr">
+        <div class="cTitle">👥 Résztvevők</div>
+        <button class="btn btnSm btnP" onclick="openAddPart()">+ Hozzáad</button>
+      </div>
+      <div id="partList" style="min-height:28px;display:flex;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- Napok -->
+    <div class="secTitle" style="margin-top:4px">📅 Napok</div>
+    <div id="daysList"></div>
+
+    <button class="btn btnD" style="margin-top:6px" onclick="if(confirm('Biztosan törlöd a túrát?')){deleteTour()}">🗑️ Túra törlése</button>
+  </div>
+</div>
+
+<!-- ===== PAGE: ESZKÖZÖK ===== -->
+<div class="pg" id="pg-equip">
+  <div class="secTitle">📦 Eszközök</div>
+  <div class="fTabs" id="eFTabs">
+    <div class="fTab on" onclick="setEF('all',this)">Összes</div>
+    <div class="fTab" onclick="setEF('free',this)">🟢 Szabad</div>
+    <div class="fTab" onclick="setEF('taken',this)">🔴 Foglalt</div>
+    <div class="fTab" onclick="setEF('done',this)">✅ Bepakolva</div>
+  </div>
+  <div id="ePersonFilter" style="margin-bottom:10px"></div>
+  <button class="btn btnP" style="margin-bottom:11px" onclick="openGlobalEquipAdd()">+ Eszköz foglalása</button>
+  <div id="eList"></div>
+</div>
+
+<!-- ===== PAGE: ÉTKEZÉS ===== -->
+<div class="pg" id="pg-food">
+  <div class="secTitle">🍲 Étkezés</div>
+  <div id="foodPgList"></div>
+</div>
+
+<!-- ===== PAGE: SZEMÉLYEK ===== -->
+<div class="pg" id="pg-persons">
+  <div class="secTitle">👤 Személyek</div>
+  <div id="persPageList"></div>
+</div>
+
+<!-- ===== PAGE: ÖSSZEFOGLALÓ ===== -->
+<div class="pg" id="pg-summary">
+  <div class="secTitle">📋 Összefoglaló</div>
+  <div id="summaryContent"></div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+
+<!-- ADD PARTICIPANT -->
+<div class="mBd" id="mPart">
+  <div class="mSheet" style="position:relative">
+    <div class="mHandle"></div>
+    <button class="mClose" onclick="closeM('mPart')">✕</button>
+    <div class="mTitle">👤 Résztvevő</div>
+    <div class="iGrp"><label class="iLbl">Név</label><input class="inp" id="partNameInp" placeholder="pl. Józsi" onkeydown="if(event.key==='Enter')addParticipant()"></div>
+    <button class="btn btnP" onclick="addParticipant()">✅ Hozzáadás</button>
+    <button class="btn btnS" style="margin-top:8px" onclick="closeM('mPart')">Mégsem</button>
+  </div>
+</div>
+
+<!-- EDIT PARTICIPANT NAME -->
+<div class="mBd" id="mEditPart">
+  <div class="mSheet" style="position:relative">
+    <div class="mHandle"></div>
+    <button class="mClose" onclick="closeM('mEditPart')">✕</button>
+    <div class="mTitle">✏️ Név szerkesztése</div>
+    <input type="hidden" id="editPartOld">
+    <div class="iGrp"><label class="iLbl">Új név</label><input class="inp" id="editPartName" onkeydown="if(event.key==='Enter')savePartName()"></div>
+    <button class="btn btnP" onclick="savePartName()">💾 Mentés</button>
+    <button class="btn btnD" style="margin-top:8px" onclick="removePartFromEdit()">🗑️ Résztvevő törlése</button>
+    <button class="btn btnS" style="margin-top:8px" onclick="closeM('mEditPart')">Mégsem</button>
+  </div>
+</div>
+
+<!-- EDIT TOUR -->
+<div class="mBd" id="mEditTour">
+  <div class="mSheet" style="position:relative">
+    <div class="mHandle"></div>
+    <button class="mClose" onclick="closeM('mEditTour')">✕</button>
+    <div class="mTitle">✏️ Túra szerkesztése</div>
+    <div class="iGrp"><label class="iLbl">🗺️ Helyszín</label><input class="inp" id="etLoc"></div>
+    <div class="iGrp"><label class="iLbl">📅 Kezdő dátum</label><input class="inp" type="date" id="etStart"></div>
+    <div class="iGrp"><label class="iLbl">📅 Záró dátum</label><input class="inp" type="date" id="etEnd"></div>
+    <button class="btn btnP" onclick="saveEditTour()">💾 Mentés</button>
+    <button class="btn btnS" style="margin-top:8px" onclick="closeM('mEditTour')">Mégsem</button>
+  </div>
+</div>
+
+<!-- GLOBAL EQUIP ADD -->
+<div class="mBd" id="mEquip">
+  <div class="mSheet" style="position:relative">
+    <div class="mHandle"></div>
+    <button class="mClose" onclick="closeM('mEquip')">✕</button>
+    <div class="mTitle">📦 Eszköz foglalása</div>
+    <div class="iGrp"><label class="iLbl">Ki foglalja?</label><select class="inp" id="eqWho"></select></div>
+    <div class="iGrp"><label class="iLbl">Eszköz neve</label>
+      <div class="acWrap">
+        <input class="inp" id="eqName" placeholder="pl. Merítőháló, bot..." oninput="eqAC()" onblur="setTimeout(()=>document.getElementById('eqACList').classList.remove('show'),200)">
+        <div class="acList" id="eqACList"></div>
+      </div>
+    </div>
+    <button class="btn btnP" onclick="addEquip(null)">🔒 Lefoglalom</button>
+    <button class="btn btnS" style="margin-top:8px" onclick="closeM('mEquip')">Mégsem</button>
+  </div>
+</div>
+
+<!-- FOOD MODAL -->
+<div class="mBd" id="mFood">
+  <div class="mSheet" style="position:relative">
+    <div class="mHandle"></div>
+    <button class="mClose" onclick="closeM('mFood')">✕</button>
+    <div class="mTitle">🍲 Napi étkezés</div>
+    <div id="foodMDayLbl" style="font-size:13px;font-weight:800;color:var(--txt2);margin-bottom:12px"></div>
+    <input type="hidden" id="foodMDay">
+    <div class="iGrp"><label class="iLbl">Menü</label><input class="inp" id="foodMMenu" placeholder="pl. Gulyásleves, Halászlé..."></div>
+    <div class="iGrp"><label class="iLbl">Ki főz?</label><select class="inp" id="foodMChef"></select></div>
+    <div class="iGrp"><label class="iLbl">Hozzávalók (vesszővel elválasztva)</label><input class="inp" id="foodMIngs" placeholder="pl. hagyma, paprika, hal, só"></div>
+    <button class="btn btnP" onclick="saveFood()">💾 Mentés</button>
+    <div id="foodMDelBtn" style="display:none;margin-top:8px"><button class="btn btnD" onclick="deleteFood()">🗑️ Törlés</button></div>
+    <button class="btn btnS" style="margin-top:8px" onclick="closeM('mFood')">Mégsem</button>
+  </div>
+</div>
+
+<!-- PERSON DETAIL MODAL -->
+<div class="mBd" id="mPerson">
+  <div class="mSheet" style="position:relative;min-height:60vh">
+    <div class="mHandle"></div>
+    <button class="mClose" onclick="closeM('mPerson')">✕</button>
+    <div id="personMContent"></div>
+  </div>
+</div>
+
+<!-- INFO MODAL -->
+<div class="mBd" id="mInfo">
+  <div class="mSheet" style="position:relative">
+    <div class="mHandle"></div>
+    <button class="mClose" onclick="closeM('mInfo')">✕</button>
+    <div class="mTitle">ℹ️ Időjárás & Infó</div>
+    <div id="infoMDayLbl" style="font-size:13px;font-weight:800;color:var(--txt2);margin-bottom:11px"></div>
+    <div id="infoContent"><div class="empty"><div class="emptyIc">🌤️</div><p class="emptyTxt">Nyomj a frissítésre!</p></div></div>
+    <button class="btn btnB" style="margin-top:12px" onclick="fetchInfo()">🔄 Frissítés</button>
+    <button class="btn btnS" style="margin-top:8px" onclick="closeM('mInfo')">Bezárás</button>
+  </div>
+</div>
+
+<!-- EQUIP EDIT MODAL -->
+<div class="mBd" id="mEqEdit">
+  <div class="mSheet" style="position:relative">
+    <div class="mHandle"></div>
+    <button class="mClose" onclick="closeM('mEqEdit')">✕</button>
+    <div class="mTitle">✏️ Eszköz szerkesztése</div>
+    <input type="hidden" id="eqEditId">
+    <div class="iGrp"><label class="iLbl">Eszköz neve</label><input class="inp" id="eqEditName"></div>
+    <div class="iGrp"><label class="iLbl">Tulajdonos</label><select class="inp" id="eqEditOwner"></select></div>
+    <div class="iGrp"><label class="iLbl">Nap (opcionális)</label><select class="inp" id="eqEditDay"></select></div>
+    <button class="btn btnP" onclick="saveEqEdit()">💾 Mentés</button>
+    <button class="btn btnD" style="margin-top:8px" onclick="deleteEqFromEdit()">🗑️ Törlés</button>
+    <button class="btn btnS" style="margin-top:8px" onclick="closeM('mEqEdit')">Mégsem</button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bNav">
+  <button class="bItem on" data-pg="home" onclick="goPage('home',this)"><div class="bi">🏠</div><div class="bl">Főoldal</div></button>
+  <button class="bItem" data-pg="equip" onclick="goPage('equip',this)"><div class="bi">📦</div><div class="bl">Eszközök</div></button>
+  <button class="bItem" data-pg="food" onclick="goPage('food',this)"><div class="bi">🍲</div><div class="bl">Étkezés</div></button>
+  <button class="bItem" data-pg="persons" onclick="goPage('persons',this)"><div class="bi">👤</div><div class="bl">Személyek</div></button>
+  <button class="bItem" data-pg="summary" onclick="goPage('summary',this)"><div class="bi">📋</div><div class="bl">Összesítő</div></button>
+</nav>
+
+<script>
+// ========== CONSTANTS (must be first!) ==========
+const DNAMES=['Vasárnap','Hétfő','Kedd','Szerda','Csütörtök','Péntek','Szombat'];
+
+// ========== STATE ==========
+let S = { tour:null, participants:[], equipment:[], foods:[], theme:'light', collapsedDays:{} };
+let eFilter='all', infoDay=null;
+
+function save(){localStorage.setItem('horgasz2',JSON.stringify(S))}
+function load(){try{const d=localStorage.getItem('horgasz2');if(d){const p=JSON.parse(d);S={...S,...p};if(!S.collapsedDays)S.collapsedDays={}}}catch(e){}}
+
+// ========== BOOT ==========
+load(); applyTheme(); renderAll();
+
+// ========== TOAST ==========
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+// ========== NAV ==========
+function goPage(pg, el){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.bItem').forEach(b=>b.classList.remove('on'));
+  document.getElementById('pg-'+pg).classList.add('on');
+  if(el) el.classList.add('on');
+  if(pg==='equip') renderEquipPage();
+  if(pg==='food') renderFoodPage();
+  if(pg==='persons') renderPersonsPage();
+  if(pg==='summary') renderSummaryPage();
+}
+
+// ========== THEME ==========
+function toggleTheme(){S.theme=S.theme==='light'?'dark':'light';applyTheme();save()}
+function applyTheme(){
+  document.body.setAttribute('data-theme',S.theme);
+  const d=S.theme==='dark';
+  document.getElementById('themeBtn').textContent=d?'🌞':'🌙';
+  const mi=document.getElementById('mThemeIc'),ml=document.getElementById('mThemeLbl');
+  if(mi)mi.textContent=d?'🌞':'🌙';
+  if(ml)ml.textContent=d?'Nappali mód':'Éjszakai mód';
+}
+
+// ========== MENU ==========
+function closeMOvl(e){if(!e||e.target===document.getElementById('mOvl'))document.getElementById('mOvl').classList.remove('open')}
+
+// ========== MODALS ==========
+function openM(id){document.getElementById(id).classList.add('open')}
+function closeM(id){document.getElementById(id).classList.remove('open')}
+
+// ========== RENDER ALL ==========
+function renderAll(){
+  renderHome();
+  const activePg=document.querySelector('.pg.on')?.id?.replace('pg-','');
+  if(activePg==='equip') renderEquipPage();
+  if(activePg==='food') renderFoodPage();
+  if(activePg==='persons') renderPersonsPage();
+  if(activePg==='summary') renderSummaryPage();
+}
+
+// ========== TOUR ==========
+function createTour(){
+  const loc=document.getElementById('tLoc').value.trim();
+  const s=document.getElementById('tStart').value;
+  const e=document.getElementById('tEnd').value;
+  if(!loc||!s||!e){alert('Töltsd ki az összes mezőt!');return}
+  if(s>e){alert('A kezdő dátum nem lehet a záró után!');return}
+  S.tour={location:loc,start:s,end:e,days:genDays(s,e)};
+  S.collapsedDays={};
+  save();renderHome();
+}
+function genDays(s,e){
+  const days=[],cur=new Date(s),end=new Date(e);
+  while(cur<=end){days.push(cur.toISOString().split('T')[0]);cur.setDate(cur.getDate()+1)}
+  return days;
+}
+function deleteTour(){S.tour=null;S.equipment=[];S.foods=[];S.participants=[];S.collapsedDays={};save();renderHome()}
+
+function openEditTour(){
+  document.getElementById('etLoc').value=S.tour.location;
+  document.getElementById('etStart').value=S.tour.start;
+  document.getElementById('etEnd').value=S.tour.end;
+  openM('mEditTour');
+}
+function saveEditTour(){
+  const loc=document.getElementById('etLoc').value.trim();
+  const s=document.getElementById('etStart').value;
+  const e=document.getElementById('etEnd').value;
+  if(!loc||!s||!e){alert('Töltsd ki az összes mezőt!');return}
+  if(s>e){alert('A kezdő nem lehet a záró után!');return}
+  S.tour.location=loc;S.tour.start=s;S.tour.end=e;S.tour.days=genDays(s,e);
+  save();closeM('mEditTour');renderHome();toast('✅ Túra frissítve!');
+}
+
+// ========== HOME RENDER ==========
+function renderHome(){
+  if(!S.tour){
+    document.getElementById('noTourDiv').style.display='block';
+    document.getElementById('activeTourDiv').style.display='none';
+    return;
+  }
+  document.getElementById('noTourDiv').style.display='none';
+  document.getElementById('activeTourDiv').style.display='block';
+
+  const t=S.tour;
+  document.getElementById('heroLoc').textContent=t.location.toUpperCase();
+  document.getElementById('heroDates').textContent=fmtD(t.start)+' – '+fmtD(t.end);
+  document.getElementById('heroMeta').innerHTML=
+    `<div class="tMetaItem">📅 ${t.days.length} nap</div>
+     <div class="tMetaItem">👥 ${S.participants.length} fő</div>
+     <div class="tMetaItem">📦 ${S.equipment.length} eszköz</div>`;
+
+  // KPI
+  const free=S.equipment.filter(e=>!e.owner).length;
+  const taken=S.equipment.filter(e=>e.owner).length;
+  const done=S.equipment.filter(e=>e.packed).length;
+  document.getElementById('kpiRow').innerHTML=`
+    <div class="kpiItem"><div class="kpiVal">${taken}</div><div class="kpiLbl">Foglalt</div></div>
+    <div class="kpiItem"><div class="kpiVal">${free}</div><div class="kpiLbl">Szabad</div></div>
+    <div class="kpiItem"><div class="kpiVal">${done}</div><div class="kpiLbl">Kész</div></div>
+    <div class="kpiItem"><div class="kpiVal">${S.participants.length}</div><div class="kpiLbl">Fő</div></div>`;
+
+  renderParticipants();
+  renderDays();
+}
+
+// ========== PARTICIPANTS ==========
+function openAddPart(){document.getElementById('partNameInp').value='';openM('mPart');setTimeout(()=>document.getElementById('partNameInp').focus(),320)}
+function addParticipant(){
+  const n=document.getElementById('partNameInp').value.trim();
+  if(!n)return;
+  if(S.participants.includes(n)){alert('Ez a név már szerepel!');return}
+  S.participants.push(n);save();closeM('mPart');renderAll();toast('👤 '+n+' hozzáadva!');
+}
+function removePart(name){
+  if(!confirm(`Törlöd ${name} nevét?`))return;
+  S.participants=S.participants.filter(p=>p!==name);
+  S.equipment.forEach(e=>{if(e.owner===name){e.owner=null;e.packed=false}});
+  save();renderAll();toast('🗑️ Törölve: '+name);
+}
+function openEditPart(name){
+  document.getElementById('editPartOld').value=name;
+  document.getElementById('editPartName').value=name;
+  openM('mEditPart');
+  setTimeout(()=>document.getElementById('editPartName').focus(),320);
+}
+function savePartName(){
+  const oldName=document.getElementById('editPartOld').value;
+  const newName=document.getElementById('editPartName').value.trim();
+  if(!newName){alert('Add meg az új nevet!');return}
+  if(newName!==oldName && S.participants.includes(newName)){alert('Ez a név már szerepel!');return}
+  S.participants=S.participants.map(p=>p===oldName?newName:p);
+  S.equipment.forEach(e=>{if(e.owner===oldName)e.owner=newName});
+  S.foods.forEach(f=>{if(f.chef===oldName)f.chef=newName});
+  save();closeM('mEditPart');closeM('mPerson');renderAll();toast('✏️ Név megváltoztatva!');
+}
+function removePartFromEdit(){
+  const name=document.getElementById('editPartOld').value;
+  if(!confirm(`Törlöd ${name} nevét?`))return;
+  S.participants=S.participants.filter(p=>p!==name);
+  S.equipment.forEach(e=>{if(e.owner===name){e.owner=null;e.packed=false}});
+  save();closeM('mEditPart');renderAll();toast('🗑️ Törölve: '+name);
+}
+function renderParticipants(){
+  const el=document.getElementById('partList');
+  if(!S.participants.length){el.innerHTML='<div style="font-size:13px;color:var(--txt3);padding:4px">Még nincs résztvevő – adj hozzá!</div>';return}
+  el.innerHTML=S.participants.map(p=>`
+    <div class="pPill" onclick="openPersonModal('${esc(p)}')">
+      <span>${p}</span>
+      <span class="pEdit" onclick="event.stopPropagation();openEditPart('${esc(p)}')">✏️</span>
+      <span class="pDel" onclick="event.stopPropagation();removePart('${esc(p)}')">✕</span>
+    </div>`).join('');
+}
+
+// ========== DAYS - COLLAPSIBLE ==========
+function toggleDay(d){
+  S.collapsedDays[d]=!S.collapsedDays[d];
+  save();
+  const body=document.getElementById('dayBody-'+d);
+  const chevron=document.getElementById('dayChev-'+d);
+  if(body){body.classList.toggle('collapsed',S.collapsedDays[d]);}
+  if(chevron){chevron.classList.toggle('open',!S.collapsedDays[d]);}
+}
+function toggleAllDays(open){
+  if(!S.tour)return;
+  S.tour.days.forEach(d=>{S.collapsedDays[d]=!open});
+  save();renderDays();
+}
+
+function renderDays(){
+  const el=document.getElementById('daysList');
+  if(!S.tour){el.innerHTML='';return}
+  el.innerHTML=S.tour.days.map(d=>{
+    const dt=new Date(d);
+    const food=S.foods.find(f=>f.day===d);
+    const eCount=S.equipment.filter(e=>e.day===d).length;
+    const eDone=S.equipment.filter(e=>e.day===d&&e.packed).length;
+    const isCollapsed=!!S.collapsedDays[d];
+    const summaryBits=[];
+    if(food) summaryBits.push(`🍲 ${food.menu}`);
+    if(eCount>0) summaryBits.push(`📦 ${eDone}/${eCount}`);
+    return `
+    <div class="dayCard fadeIn" id="dc-${d}">
+      <div class="dayHdr" onclick="toggleDay('${d}')">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+          <div>
+            <div class="dayDate">${fmtD(d)}</div>
+            <div class="dayName">${DNAMES[dt.getDay()]}</div>
+          </div>
+          ${summaryBits.length?`<div style="font-size:11px;color:var(--txt3);font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${summaryBits.join(' · ')}</div>`:''}
+        </div>
+        <div class="dayBtns" onclick="event.stopPropagation()">
+          <button class="dBtn dBtnF" onclick="openFoodM('${d}')">🍲 ${food?'✏️':'+'}</button>
+          <button class="dBtn dBtnI" onclick="openInfoM('${d}')">ℹ️</button>
+        </div>
+        <div class="collapseChevron ${isCollapsed?'':'open'}" id="dayChev-${d}">▼</div>
+      </div>
+      <div class="dayCollapse ${isCollapsed?'collapsed':''}" id="dayBody-${d}">
+        ${food?`
+        <div class="foodBlock" style="position:relative">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between">
+            <div style="flex:1">
+              <div class="fMenu">${food.menu}</div>
+              <div class="fChef">👨‍🍳 ${food.chef}</div>
+              <div class="fIngs">${(food.ingredients||[]).map(i=>`<span class="fIng">🥬 ${i}</span>`).join('')}</div>
+            </div>
+            <button class="btn btnXs btnO" style="flex-shrink:0;margin-left:8px" onclick="openFoodM('${d}')">✏️ Szerkeszt</button>
+          </div>
+        </div>`:''}
+        <div class="eAddRow">
+          <div class="acWrap" style="flex:1">
+            <input class="inp" id="dEqInp-${d}" placeholder="Eszköz neve..." oninput="dayEqAC('${d}')" onblur="setTimeout(()=>{const l=document.getElementById('dEqAC-${d}');if(l)l.classList.remove('show')},200)" onkeydown="if(event.key==='Enter')addDayEquip('${d}')">
+            <div class="acList" id="dEqAC-${d}"></div>
+          </div>
+          <select id="dEqWho-${d}" style="width:115px;padding:8px 8px;border:1.5px solid var(--border);border-radius:6px;background:var(--surf2);color:var(--txt);font-family:var(--font);font-size:13px;outline:none">
+            ${S.participants.map(p=>`<option value="${p}">${p}</option>`).join('')}
+          </select>
+          <button class="btn btnP btnSm" onclick="addDayEquip('${d}')" style="padding:8px 12px;font-size:13px;width:auto">+</button>
+        </div>
+        <div class="dayEquipList" id="deq-${d}">
+          ${renderDayEquipItems(d)}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderDayEquipItems(d){
+  const items=S.equipment.filter(e=>e.day===d);
+  if(!items.length) return '<div style="font-size:13px;color:var(--txt3);padding:10px 15px">Még nincs eszköz ehhez a naphoz</div>';
+  return items.map(e=>`
+    <div class="eRow" id="er-${e.id}">
+      <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked(${e.id},'day','${d}')">${e.packed?'✓':''}</div>
+      <div style="flex:1">
+        <div class="eName ${e.packed?'done':''}">${e.name}</div>
+        <div class="eOwner"><span class="bdg ${e.owner?'bTaken':'bFree'}">${e.owner?'🔒 '+e.owner:'🟢 Szabad'}</span>${e.packed?'<span class="bdg bDone" style="margin-left:4px">✅</span>':''}</div>
+      </div>
+      <div class="eActions">
+        <button class="btn btnXs btnS" onclick="openEqEdit(${e.id})">✏️</button>
+        <button class="btn btnXs btnD" onclick="deleteEq(${e.id},'day','${d}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function dayEqAC(d){
+  const val=document.getElementById('dEqInp-'+d).value.toLowerCase();
+  const list=document.getElementById('dEqAC-'+d);
+  if(!val){list.classList.remove('show');return}
+  const all=[...new Set(S.equipment.map(e=>e.name))];
+  const matches=all.filter(n=>n.toLowerCase().includes(val));
+  if(!matches.length){list.classList.remove('show');return}
+  list.innerHTML=matches.map(n=>`<div class="acItem" onmousedown="document.getElementById('dEqInp-${d}').value='${esc(n)}';document.getElementById('dEqAC-${d}').classList.remove('show')">${n}</div>`).join('');
+  list.classList.add('show');
+}
+
+function addDayEquip(d){
+  const name=document.getElementById('dEqInp-'+d).value.trim();
+  const who=document.getElementById('dEqWho-'+d)?.value||'';
+  if(!name) return;
+  const existing=S.equipment.find(e=>e.name.toLowerCase()===name.toLowerCase()&&e.owner&&e.owner!==who);
+  if(existing){alert(`"${name}" már ${existing.owner} eszköze!`);return}
+  S.equipment.push({id:Date.now()+Math.random(),name,owner:who||null,packed:false,day:d});
+  document.getElementById('dEqInp-'+d).value='';
+  save();
+  const deq=document.getElementById('deq-'+d);
+  if(deq) deq.innerHTML=renderDayEquipItems(d);
+  renderHome();
+  const activePg=document.querySelector('.pg.on')?.id?.replace('pg-','');
+  if(activePg==='equip') renderEquipPage();
+  toast('📦 Eszköz hozzáadva!');
+}
+
+// ========== GLOBAL EQUIP ==========
+function openGlobalEquipAdd(){
+  if(!S.tour){alert('Először hozz létre túrát!');return}
+  if(!S.participants.length){alert('Először adj hozzá résztvevőket!');return}
+  document.getElementById('eqWho').innerHTML=S.participants.map(p=>`<option value="${p}">${p}</option>`).join('');
+  document.getElementById('eqName').value='';
+  openM('mEquip');setTimeout(()=>document.getElementById('eqName').focus(),320);
+}
+function eqAC(){
+  const val=document.getElementById('eqName').value.toLowerCase();
+  const list=document.getElementById('eqACList');
+  if(!val){list.classList.remove('show');return}
+  const all=[...new Set(S.equipment.map(e=>e.name))];
+  const matches=all.filter(n=>n.toLowerCase().includes(val));
+  if(!matches.length){list.classList.remove('show');return}
+  list.innerHTML=matches.map(n=>`<div class="acItem" onmousedown="document.getElementById('eqName').value='${esc(n)}';document.getElementById('eqACList').classList.remove('show')">${n}</div>`).join('');
+  list.classList.add('show');
+}
+function addEquip(day){
+  const who=document.getElementById('eqWho').value;
+  const name=document.getElementById('eqName').value.trim();
+  if(!name){alert('Add meg az eszköz nevét!');return}
+  const existing=S.equipment.find(e=>e.name.toLowerCase()===name.toLowerCase()&&e.owner&&e.owner!==who);
+  if(existing){alert(`"${name}" már ${existing.owner} eszköze!`);return}
+  S.equipment.push({id:Date.now(),name,owner:who,packed:false,day:day||null});
+  save();closeM('mEquip');renderAll();toast('🔒 Eszköz lefoglalva!');
+}
+
+// ========== EQUIP EDIT ==========
+function openEqEdit(id){
+  const e=S.equipment.find(x=>x.id==id);
+  if(!e)return;
+  document.getElementById('eqEditId').value=id;
+  document.getElementById('eqEditName').value=e.name;
+  const sel=document.getElementById('eqEditOwner');
+  sel.innerHTML='<option value="">— Szabad —</option>'+S.participants.map(p=>`<option value="${p}" ${e.owner===p?'selected':''}>${p}</option>`).join('');
+  const daysel=document.getElementById('eqEditDay');
+  daysel.innerHTML='<option value="">— Nincs nap —</option>'+(S.tour?S.tour.days.map(d=>`<option value="${d}" ${e.day===d?'selected':''}>${fmtD(d)} ${DNAMES[new Date(d).getDay()]}</option>`).join(''):'');
+  openM('mEqEdit');
+}
+function saveEqEdit(){
+  const id=document.getElementById('eqEditId').value;
+  const e=S.equipment.find(x=>x.id==id);
+  if(!e)return;
+  const newName=document.getElementById('eqEditName').value.trim();
+  const newOwner=document.getElementById('eqEditOwner').value;
+  const newDay=document.getElementById('eqEditDay').value;
+  if(!newName){alert('Add meg a nevet!');return}
+  e.name=newName;e.owner=newOwner||null;e.day=newDay||null;
+  save();closeM('mEqEdit');renderAll();toast('✅ Eszköz frissítve!');
+}
+function deleteEqFromEdit(){
+  const id=document.getElementById('eqEditId').value;
+  if(!confirm('Törlöd ezt az eszközt?'))return;
+  S.equipment=S.equipment.filter(e=>e.id!=id);
+  save();closeM('mEqEdit');renderAll();toast('🗑️ Eszköz törölve');
+}
+function deleteEq(id,ctx,d){
+  if(!confirm('Törlöd?'))return;
+  S.equipment=S.equipment.filter(e=>e.id!=id);
+  save();
+  if(ctx==='day'){
+    const deq=document.getElementById('deq-'+d);
+    if(deq)deq.innerHTML=renderDayEquipItems(d);
+  }
+  if(ctx==='food') renderFoodPage();
+  renderHome();
+  const activePg=document.querySelector('.pg.on')?.id?.replace('pg-','');
+  if(activePg==='equip')renderEquipPage();
+  if(activePg==='summary')renderSummaryPage();
+  toast('🗑️ Törölve');
+}
+function togglePacked(id,ctx,d){
+  const e=S.equipment.find(x=>x.id==id);
+  if(!e)return;
+  e.packed=!e.packed;save();
+  if(ctx==='day'){
+    const deq=document.getElementById('deq-'+d);
+    if(deq)deq.innerHTML=renderDayEquipItems(d);
+  }
+  if(ctx==='food') renderFoodPage();
+  renderHome();
+  const activePg=document.querySelector('.pg.on')?.id?.replace('pg-','');
+  if(activePg==='equip')renderEquipPage();
+  if(activePg==='summary')renderSummaryPage();
+  toast(e.packed?'✅ Bepakolva!':'↩️ Visszavéve');
+}
+
+// ========== EQUIP PAGE ==========
+let eF='all',ePerson='';
+function setEF(f,el){
+  eF=f;
+  document.querySelectorAll('.fTab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  renderEquipPage();
+}
+function renderEquipPage(){
+  const pf=document.getElementById('ePersonFilter');
+  pf.innerHTML=S.participants.length?`<select class="inp" id="ePersonSel" onchange="ePerson=this.value;renderEquipPage()">
+    <option value="">— Mindenki —</option>
+    ${S.participants.map(p=>`<option value="${p}" ${ePerson===p?'selected':''}>${p}</option>`).join('')}
+  </select>`:'';
+
+  let list=[...S.equipment];
+  if(eF==='free')list=list.filter(e=>!e.owner);
+  if(eF==='taken')list=list.filter(e=>!!e.owner);
+  if(eF==='done')list=list.filter(e=>e.packed);
+  if(ePerson)list=list.filter(e=>e.owner===ePerson);
+
+  const el=document.getElementById('eList');
+  if(!list.length){
+    el.innerHTML=`<div class="empty"><div class="emptyIc">📦</div><p class="emptyTxt">${S.equipment.length?'Nincs ilyen eszköz':'Még nincs eszköz'}</p></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="card" style="padding:0">`+list.map(e=>`
+    <div class="eRow">
+      <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked(${e.id},'page',null)">${e.packed?'✓':''}</div>
+      <div style="flex:1">
+        <div class="eName ${e.packed?'done':''}">${e.name}</div>
+        <div class="eOwner">
+          <span class="bdg ${e.owner?'bTaken':'bFree'}">${e.owner?'🔒 '+e.owner:'🟢 Szabad'}</span>
+          ${e.day?`<span class="bdg bBlu" style="margin-left:4px">📅 ${fmtD(e.day)}</span>`:''}
+          ${e.packed?'<span class="bdg bDone" style="margin-left:4px">✅</span>':''}
+        </div>
+      </div>
+      <div class="eActions">
+        <button class="btn btnXs btnS" onclick="openEqEdit(${e.id})">✏️</button>
+        <button class="btn btnXs btnD" onclick="deleteEq(${e.id},'page',null)">✕</button>
+      </div>
+    </div>`).join('')+`</div>`;
+}
+
+// ========== FOOD ==========
+function openFoodM(day){
+  if(!S.participants.length){alert('Adj hozzá résztvevőket!');return}
+  const dt=new Date(day);
+  document.getElementById('foodMDay').value=day;
+  document.getElementById('foodMDayLbl').textContent=`${DNAMES[dt.getDay()]}, ${fmtD(day)}`;
+  const chef=document.getElementById('foodMChef');
+  chef.innerHTML=S.participants.map(p=>`<option value="${p}">${p}</option>`).join('');
+  const existing=S.foods.find(f=>f.day===day);
+  document.getElementById('foodMMenu').value=existing?existing.menu:'';
+  document.getElementById('foodMIngs').value=existing?(existing.ingredients||[]).join(', '):'';
+  if(existing)chef.value=existing.chef;
+  document.getElementById('foodMDelBtn').style.display=existing?'block':'none';
+  openM('mFood');
+}
+function saveFood(){
+  const day=document.getElementById('foodMDay').value;
+  const menu=document.getElementById('foodMMenu').value.trim();
+  const chef=document.getElementById('foodMChef').value;
+  const ingStr=document.getElementById('foodMIngs').value.trim();
+  if(!menu){alert('Add meg a menüt!');return}
+  const ingredients=ingStr?ingStr.split(',').map(s=>s.trim()).filter(Boolean):[];
+  S.foods=S.foods.filter(f=>f.day!==day);
+  S.foods.push({day,menu,chef,ingredients});
+  save();closeM('mFood');renderAll();toast('🍲 Menü mentve!');
+}
+function deleteFood(){
+  const day=document.getElementById('foodMDay').value;
+  if(!confirm('Törlöd a napi menüt?'))return;
+  S.foods=S.foods.filter(f=>f.day!==day);
+  save();closeM('mFood');renderAll();toast('🗑️ Menü törölve');
+}
+function addFoodEquip(d){
+  const chef=S.foods.find(f=>f.day===d)?.chef;
+  const inp=document.getElementById('foodEqInp-'+d);
+  if(!inp||!chef)return;
+  const n=inp.value.trim();
+  if(!n)return;
+  S.equipment.push({id:Date.now()+Math.random(),name:n,owner:chef,packed:false,day:d});
+  save();inp.value='';renderFoodPage();renderHome();
+  const activePg=document.querySelector('.pg.on')?.id?.replace('pg-','');
+  if(activePg==='equip')renderEquipPage();
+  toast('📦 Eszköz hozzáadva!');
+}
+
+function renderFoodPage(){
+  const el=document.getElementById('foodPgList');
+  if(!S.tour){el.innerHTML='<div class="empty"><div class="emptyIc">🍲</div><p class="emptyTxt">Nincs aktív túra</p></div>';return}
+  el.innerHTML=S.tour.days.map(d=>{
+    const dt=new Date(d);
+    const food=S.foods.find(f=>f.day===d);
+    // All equipment for this day owned by the chef
+    const dayEquip=food?S.equipment.filter(e=>e.day===d&&e.owner===food.chef):[];
+    const chefAv=food?food.chef.charAt(0).toUpperCase():'';
+    return `<div class="dayCard">
+      <div class="dayHdr" style="cursor:default">
+        <div><div class="dayDate">${fmtD(d)}</div><div class="dayName">${DNAMES[dt.getDay()]}</div></div>
+        <button class="dBtn dBtnF" onclick="openFoodM('${d}')">✏️ ${food?'Szerkeszt':'Beállít'}</button>
+      </div>
+      ${food?`
+      <div class="foodBlock">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:38px;height:38px;border-radius:50%;background:var(--ora);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;flex-shrink:0">${chefAv}</div>
+          <div style="flex:1">
+            <div style="font-size:11px;font-weight:800;color:var(--ora);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">👨‍🍳 Szakács</div>
+            <div style="font-size:17px;font-weight:900;color:var(--txt)">${food.chef}</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,0.08)">
+          <div style="font-size:13px;font-weight:800;color:var(--txt2);margin-bottom:4px">🍽️ ${food.menu}</div>
+          ${(food.ingredients||[]).length?`<div class="fIngs">${food.ingredients.map(i=>`<span class="fIng">🥬 ${i}</span>`).join('')}</div>`:''}
+        </div>
+      </div>
+      <div style="padding:10px 15px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:800;color:var(--txt2);margin-bottom:7px">🧳 ${food.chef} főzéshez szükséges eszközei ezen a napon</div>
+        ${dayEquip.length?`<div style="display:flex;flex-direction:column;gap:0;margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid var(--border)">
+          ${dayEquip.map(e=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surf);border-bottom:1px solid var(--border)">
+            <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked(${e.id},'food','${d}')" style="width:26px;height:26px;font-size:13px">${e.packed?'✓':''}</div>
+            <div class="eName ${e.packed?'done':''}" style="flex:1;font-size:14px">${e.name}</div>
+            ${e.packed?'<span class="bdg bDone" style="font-size:11px">✅</span>':'<span class="bdg bWarn" style="font-size:11px">⏳</span>'}
+            <button class="btn btnXs btnS" onclick="openEqEdit(${e.id})">✏️</button>
+            <button class="btn btnXs btnD" onclick="deleteEq(${e.id},'food','${d}')">✕</button>
+          </div>`).join('')}
+        </div>`:`<div style="font-size:13px;color:var(--txt3);margin-bottom:8px">Még nincs eszköz ehhez a naphoz</div>`}
+        <div style="display:flex;gap:6px">
+          <input class="inp" id="foodEqInp-${d}" placeholder="Eszköz neve (${food.chef}-hez)..." style="flex:1;padding:8px 11px;font-size:13px" onkeydown="if(event.key==='Enter')addFoodEquip('${d}')">
+          <button class="btn btnP btnSm" onclick="addFoodEquip('${d}')">+</button>
+        </div>
+      </div>`
+      :`<div style="padding:12px 15px;font-size:14px;color:var(--txt3)">Nincs megadva menü – kattints a beállításra!</div>`}
+    </div>`;
+  }).join('');
+}
+
+// ========== PERSON MODAL ==========
+function openPersonModal(name){
+  const myEquip=S.equipment.filter(e=>e.owner===name);
+  const myFoods=S.foods.filter(f=>f.chef===name);
+  const done=myEquip.filter(e=>e.packed).length;
+  const total=myEquip.length;
+  document.getElementById('personMContent').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;flex-shrink:0">${name.charAt(0).toUpperCase()}</div>
+      <div style="flex:1">
+        <div style="font-family:var(--fdis);font-size:24px;letter-spacing:.5px">${name}</div>
+        <div style="font-size:13px;color:var(--txt2)">${done}/${total} bepakolva · ${myFoods.length} nap főz</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btnXs btnB" onclick="openEditPart('${esc(name)}')">✏️ Név</button>
+        <button class="btn btnXs btnD" onclick="removePart('${esc(name)}');closeM('mPerson')">🗑️</button>
+      </div>
+    </div>
+    <div class="div"></div>
+    <div style="font-size:13px;font-weight:800;color:var(--txt2);margin-bottom:8px">📦 ESZKÖZEI</div>
+    ${myEquip.length?myEquip.map(e=>`
+      <div class="eRow" style="padding:9px 0;border-bottom:1px solid var(--border)">
+        <div class="eCheck ${e.packed?'done':''}" onclick="togglePacked(${e.id},'modal',null);openPersonModal('${esc(name)}')">${e.packed?'✓':''}</div>
+        <div style="flex:1">
+          <div class="eName ${e.packed?'done':''}">${e.name}</div>
+          ${e.day?`<div style="font-size:11px;color:var(--txt3)">📅 ${fmtD(e.day)}</div>`:''}
+        </div>
+        ${e.packed?'<span class="bdg bDone">✅ Kész</span>':'<span class="bdg bWarn">⏳ Hiányzik</span>'}
+        <button class="btn btnXs btnS" style="margin-left:6px" onclick="openEqEdit(${e.id})">✏️</button>
+      </div>`).join(''):'<div style="font-size:13px;color:var(--txt3);padding:8px 0">Nincs foglalt eszköze</div>'}
+    <div style="margin-top:12px">
+      <div style="font-size:13px;font-weight:800;color:var(--txt2);margin-bottom:8px">➕ ÚJ ESZKÖZ</div>
+      <div style="display:flex;gap:7px">
+        <input class="inp" id="persEqInp" placeholder="Eszköz neve..." style="flex:1;padding:9px 11px">
+        <button class="btn btnP btnSm" onclick="addEquipForPerson('${esc(name)}')">+</button>
+      </div>
+    </div>
+    ${myFoods.length?`
+    <div class="div"></div>
+    <div style="font-size:13px;font-weight:800;color:var(--txt2);margin-bottom:8px">🍲 FŐZÉSI NAPOK</div>
+    ${myFoods.map(f=>`<div style="background:var(--oraL);border-radius:8px;padding:10px 12px;margin-bottom:6px;border-left:3px solid var(--ora)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:800;color:var(--ora)">${fmtD(f.day)} – ${DNAMES[new Date(f.day).getDay()]}</div>
+          <div style="font-size:15px;font-weight:900">${f.menu}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${(f.ingredients||[]).map(i=>`<span class="fIng">${i}</span>`).join('')}</div>
+        </div>
+        <button class="btn btnXs btnO" style="margin-left:8px;flex-shrink:0" onclick="openFoodM('${f.day}')">✏️</button>
+      </div>
+    </div>`).join('')}`:''}`;
+  openM('mPerson');
+}
+function addEquipForPerson(name){
+  const inp=document.getElementById('persEqInp');
+  const n=inp.value.trim();
+  if(!n)return;
+  const existing=S.equipment.find(e=>e.name.toLowerCase()===n.toLowerCase()&&e.owner&&e.owner!==name);
+  if(existing){alert(`"${n}" már ${existing.owner} eszköze!`);return}
+  S.equipment.push({id:Date.now(),name:n,owner:name,packed:false,day:null});
+  save();inp.value='';openPersonModal(name);renderAll();toast('📦 Eszköz hozzáadva!');
+}
+
+// ========== PERSONS PAGE ==========
+function renderPersonsPage(){
+  const el=document.getElementById('persPageList');
+  if(!S.participants.length){el.innerHTML='<div class="empty"><div class="emptyIc">👤</div><p class="emptyTxt">Nincs résztvevő</p></div>';return}
+  el.innerHTML=S.participants.map(name=>{
+    const myEq=S.equipment.filter(e=>e.owner===name);
+    const myFoods=S.foods.filter(f=>f.chef===name);
+    const done=myEq.filter(e=>e.packed).length;
+    return `<div class="persCard fadeIn" onclick="openPersonModal('${esc(name)}')">
+      <div class="persHdr">
+        <div class="persAv">${name.charAt(0).toUpperCase()}</div>
+        <div class="persName">${name}</div>
+        <div style="text-align:right">
+          <div class="bdg ${done===myEq.length&&myEq.length>0?'bDone':'bWarn'}" style="margin-bottom:3px">${done}/${myEq.length} kész</div>
+          ${myFoods.length?`<div class="bdg bBlu">🍲 ${myFoods.length} nap</div>`:''}
+        </div>
+        <button class="btn btnXs btnB" style="margin-left:6px;flex-shrink:0" onclick="event.stopPropagation();openEditPart('${esc(name)}')">✏️</button>
+        <div style="font-size:16px;color:var(--txt3);margin-left:4px">›</div>
+      </div>
+      <div style="padding:10px 15px;display:flex;flex-wrap:wrap;gap:4px">
+        ${myEq.slice(0,5).map(e=>`<span class="bdg ${e.packed?'bDone':'bWarn'}">${e.packed?'✅':'⏳'} ${e.name}</span>`).join('')}
+        ${myEq.length>5?`<span class="bdg" style="background:var(--surf2);color:var(--txt2)">+${myEq.length-5} több</span>`:''}
+        ${!myEq.length?`<span style="font-size:13px;color:var(--txt3)">Nincs eszköze</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ========== SUMMARY PAGE ==========
+function addEquipFromSummary(name){
+  const inp=document.getElementById('sumEqInp-'+name.replace(/\s/g,'_'));
+  if(!inp)return;
+  const n=inp.value.trim();
+  if(!n)return;
+  const existing=S.equipment.find(e=>e.name.toLowerCase()===n.toLowerCase()&&e.owner&&e.owner!==name);
+  if(existing){alert(`"${n}" már ${existing.owner} eszköze!`);return}
+  S.equipment.push({id:Date.now()+Math.random(),name:n,owner:name,packed:false,day:null});
+  save();inp.value='';renderSummaryPage();renderHome();
+  const activePg=document.querySelector('.pg.on')?.id?.replace('pg-','');
+  if(activePg==='equip')renderEquipPage();
+  toast('📦 Eszköz hozzáadva!');
+}
+
+function renderSummaryPage(){
+  const el=document.getElementById('summaryContent');
+  if(!S.tour){el.innerHTML='<div class="empty"><div class="emptyIc">📋</div><p class="emptyTxt">Nincs aktív túra</p></div>';return}
+
+  let html='';
+
+  // --- ESZKÖZ ÖSSZEFOGLALÓ ---
+  html+=`<div class="sumSection">
+    <div class="sumSecHdr">📦 Eszközök személyenként</div>`;
+  if(!S.participants.length){
+    html+=`<div style="padding:14px 15px;font-size:14px;color:var(--txt3)">Nincs résztvevő</div>`;
+  } else {
+    S.participants.forEach(name=>{
+      const myEq=S.equipment.filter(e=>e.owner===name);
+      const myFoods=S.foods.filter(f=>f.chef===name);
+      const done=myEq.filter(e=>e.packed).length;
+      const safeId=name.replace(/\s/g,'_');
+      html+=`<div class="sumPersonRow">
+        <div class="sumPersonName">
+          <div class="sumPersonAv">${name.charAt(0).toUpperCase()}</div>
+          <span>${name}</span>
+          <span class="bdg ${done===myEq.length&&myEq.length>0?'bDone':'bWarn'}" style="font-size:11px">${done}/${myEq.length} kész</span>
+          ${myFoods.length?`<span class="bdg bBlu" style="font-size:11px">🍲 ${myFoods.length} nap főz</span>`:''}
+        </div>
+        <div class="sumTags">
+          ${myEq.length?myEq.map(e=>`<span class="sumTag ${e.packed?'sumTagDone':'sumTagEq'}" onclick="openEqEdit(${e.id})" style="cursor:pointer" title="Kattints a szerkesztéshez">${e.packed?'✅':'📦'} ${e.name}${e.day?' ('+fmtD(e.day)+')':''}</span>`).join('')
+          :`<span style="font-size:13px;color:var(--txt3)">– nincs eszköz –</span>`}
+        </div>
+        ${myFoods.length?`<div style="margin-top:7px;display:flex;flex-wrap:wrap;gap:5px">
+          ${myFoods.map(f=>`<div style="background:var(--oraL);border-left:3px solid var(--ora);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer" onclick="openFoodM('${f.day}')">
+            <span style="font-weight:800;color:var(--ora)">${fmtD(f.day)}</span> 🍲 <span style="font-weight:900">${f.menu}</span> <span style="color:var(--txt3)">✏️</span>
+          </div>`).join('')}
+        </div>`:''}
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <input class="inp" id="sumEqInp-${safeId}" placeholder="+ Új eszköz neve..." style="flex:1;padding:7px 11px;font-size:13px" onkeydown="if(event.key==='Enter')addEquipFromSummary('${esc(name)}')">
+          <button class="btn btnP btnSm" onclick="addEquipFromSummary('${esc(name)}')">+</button>
+        </div>
+      </div>`;
+    });
+    // Szabad eszközök
+    const freeEq=S.equipment.filter(e=>!e.owner);
+    if(freeEq.length){
+      html+=`<div class="sumPersonRow">
+        <div class="sumPersonName" style="color:var(--acc)">🟢 Szabad eszközök</div>
+        <div class="sumTags">${freeEq.map(e=>`<span class="sumTag sumTagEq" onclick="openEqEdit(${e.id})" style="cursor:pointer">📦 ${e.name}</span>`).join('')}</div>
+      </div>`;
+    }
+  }
+  html+=`</div>`;
+
+  // --- ÉTEL ÖSSZEFOGLALÓ ---
+  html+=`<div class="sumSection">
+    <div class="sumSecHdr">🍲 Étkezés naponta</div>`;
+  const foodDays=S.tour.days.filter(d=>S.foods.find(f=>f.day===d));
+  if(!foodDays.length){
+    html+=`<div style="padding:14px 15px;font-size:14px;color:var(--txt3)">Még nincs megadva étkezés</div>`;
+  } else {
+    S.tour.days.forEach(d=>{
+      const food=S.foods.find(f=>f.day===d);
+      const dt=new Date(d);
+      html+=`<div class="sumPersonRow">
+        <div class="sumPersonName">
+          <span style="font-size:13px;color:var(--txt3);font-family:var(--fdis);letter-spacing:.3px">${fmtD(d)} ${DNAMES[dt.getDay()]}</span>
+          ${food?`<button class="btn btnXs btnO" style="margin-left:auto" onclick="openFoodM('${d}')">✏️</button>`:''}
+        </div>
+        ${food
+          ?`<div style="margin-top:4px">
+              <div style="font-size:15px;font-weight:900">${food.menu}</div>
+              <div style="font-size:12px;color:var(--ora);font-weight:800;margin-top:2px">👨‍🍳 ${food.chef}</div>
+              <div class="sumTags" style="margin-top:5px">${(food.ingredients||[]).map(i=>`<span class="sumTag sumTagFood">🥬 ${i}</span>`).join('')}</div>
+            </div>`
+          :`<div style="font-size:13px;color:var(--txt3)">– nincs megadva – <button class="btn btnXs btnO" onclick="openFoodM('${d}')">+ Beállít</button></div>`
+        }
+      </div>`;
+    });
+  }
+  html+=`</div>`;
+
+  // --- HOZZÁVALÓK ÖSSZESÍTÉS ---
+  const allIngs={};
+  S.foods.forEach(f=>{
+    (f.ingredients||[]).forEach(ing=>{
+      const key=ing.toLowerCase().trim();
+      if(!allIngs[key]) allIngs[key]={name:ing,chefs:[],days:[]};
+      if(!allIngs[key].chefs.includes(f.chef)) allIngs[key].chefs.push(f.chef);
+      allIngs[key].days.push(f.day);
+    });
+  });
+  const ingList=Object.values(allIngs);
+  if(ingList.length){
+    html+=`<div class="sumSection">
+      <div class="sumSecHdr">🛒 Bevásárlólista</div>
+      <div style="padding:12px 15px;display:flex;flex-wrap:wrap;gap:6px">
+        ${ingList.map(ing=>`<span class="sumTag sumTagFood" style="font-size:13px">🥬 ${ing.name}<span style="opacity:.7;font-size:11px"> ×${ing.days.length}</span></span>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // --- TELJES STATISZTIKA ---
+  const totalEq=S.equipment.length;
+  const packedEq=S.equipment.filter(e=>e.packed).length;
+  const pct=totalEq?Math.round(packedEq/totalEq*100):0;
+  html+=`<div class="sumSection">
+    <div class="sumSecHdr">📊 Státusz</div>
+    <div style="padding:14px 15px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:14px;font-weight:800;color:var(--txt2)">Bepakolás haladása</span>
+        <span style="font-size:14px;font-weight:900;color:var(--acc)">${packedEq}/${totalEq} (${pct}%)</span>
+      </div>
+      <div style="height:10px;background:var(--border);border-radius:10px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:var(--acc);border-radius:10px;transition:width .4s"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <span class="bdg bTaken">📦 ${totalEq} eszköz</span>
+        <span class="bdg bDone">✅ ${packedEq} bepakolva</span>
+        <span class="bdg bWarn">⏳ ${totalEq-packedEq} hiányzik</span>
+        <span class="bdg bBlu">🍲 ${S.foods.length}/${S.tour.days.length} nap étkezés</span>
+      </div>
+    </div>
+  </div>`;
+
+  el.innerHTML=html;
+}
+
+// ========== INFO / WEATHER ==========
+function openInfoM(day){
+  infoDay=day;
+  const dt=new Date(day);
+  document.getElementById('infoMDayLbl').textContent=`${DNAMES[dt.getDay()]}, ${fmtD(day)}${S.tour?' — '+S.tour.location:''}`;
+  document.getElementById('infoContent').innerHTML=`<div class="empty"><div class="emptyIc">🌤️</div><p class="emptyTxt">Nyomj a frissítésre az adatokért!</p></div>`;
+  openM('mInfo');
+}
+async function fetchInfo(){
+  if(!S.tour)return;
+  const loc=encodeURIComponent(S.tour.location);
+  const el=document.getElementById('infoContent');
+  el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--txt2)">⏳ Betöltés...</div>`;
+  try{
+    const gR=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${loc}&count=1&language=hu&format=json`);
+    const gD=await gR.json();
+    if(!gD.results?.length)throw new Error('Helyszín nem található');
+    const {latitude:lat,longitude:lon,name}=gD.results[0];
+    const wR=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,surface_pressure,weather_code&daily=sunrise,sunset&wind_speed_unit=kmh&timezone=Europe%2FBudapest`);
+    const wD=await wR.json();
+    const cur=wD.current;const daily=wD.daily;
+    const sunrise=(daily.sunrise[0]||'').split('T')[1]||'—';
+    const sunset=(daily.sunset[0]||'').split('T')[1]||'—';
+    const pressure=Math.round(cur.surface_pressure);
+    const fishIdx=pressure>1015?'jó':pressure>1005?'közepes':'rossz';
+    const fishCls=fishIdx==='jó'?'solJ':fishIdx==='közepes'?'solK':'solR';
+    const sol=calcSolunar(lat,infoDay?new Date(infoDay):new Date());
+    const month=infoDay?new Date(infoDay).getMonth()+1:new Date().getMonth()+1;
+    const bans=fishBans(month);
+    el.innerHTML=`
+      <div style="text-align:center;margin-bottom:14px">
+        <div style="font-size:42px">${wIco(cur.weather_code)}</div>
+        <div class="weatherBig">${Math.round(cur.temperature_2m)}°C</div>
+        <div style="font-size:14px;font-weight:800;color:var(--txt2)">${wDesc(cur.weather_code)}</div>
+        <div style="font-size:12px;color:var(--txt3)">📍 ${name}</div>
+      </div>
+      <div class="infoBlk">
+        <div class="iRow"><span class="iKey">💨 Szél</span><span class="iVal">${Math.round(cur.wind_speed_10m)} km/h</span></div>
+        <div class="iRow"><span class="iKey">💧 Páratartalom</span><span class="iVal">${cur.relative_humidity_2m}%</span></div>
+        <div class="iRow"><span class="iKey">📊 Légnyomás</span><span class="iVal">${pressure} hPa</span></div>
+        <div class="iRow"><span class="iKey">🌅 Napkelte</span><span class="iVal">${sunrise}</span></div>
+        <div class="iRow"><span class="iKey">🌇 Napnyugta</span><span class="iVal">${sunset}</span></div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-size:13px;font-weight:800;color:var(--txt2);margin-bottom:8px">🎣 SZOLUNÁRIS & FOGHATÓSÁG</div>
+        <div class="infoBlk" style="background:var(--accL);border-color:var(--acc)">
+          <div class="iRow"><span class="iKey">🌙 Főidő 1</span><span class="iVal">${sol.major1}</span></div>
+          <div class="iRow"><span class="iKey">🌙 Főidő 2</span><span class="iVal">${sol.major2}</span></div>
+          <div class="iRow"><span class="iKey">☀️ Melléidő 1</span><span class="iVal">${sol.minor1}</span></div>
+          <div class="iRow"><span class="iKey">☀️ Melléidő 2</span><span class="iVal">${sol.minor2}</span></div>
+          <div class="iRow"><span class="iKey">📈 Fogási esély</span><span class="iVal"><span class="solRating ${fishCls}">${fishIdx==='jó'?'🟢':fishIdx==='közepes'?'🟡':'🔴'} ${fishIdx.charAt(0).toUpperCase()+fishIdx.slice(1)}</span></span></div>
+          <div class="iRow"><span class="iKey">🌊 Hold-index</span><span class="iVal">${sol.rating}</span></div>
+        </div>
+      </div>
+      ${bans.length?`<div style="margin-top:12px">
+        <div style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:7px">⚠️ TILALMI HALFAJOK (${month}. HÓ)</div>
+        <div class="infoBlk" style="background:var(--redL);border-color:var(--red)">
+          ${bans.map(b=>`<div class="iRow"><span class="iKey">🚫 ${b.fish}</span><span class="iVal" style="font-size:12px;color:var(--red)">${b.period}</span></div>`).join('')}
+        </div>
+      </div>`:''}`;
+  }catch(err){
+    el.innerHTML=`<div class="empty"><div class="emptyIc">⚠️</div><p class="emptyTxt">Hiba: ${err.message}</p></div>`;
+  }
+}
+
+function wDesc(c){const m={0:'Derült',1:'Többnyire derült',2:'Részben felhős',3:'Borult',45:'Ködös',48:'Ködös',51:'Szitálás',61:'Eső',63:'Eső',65:'Erős eső',71:'Hóesés',80:'Záporok',81:'Záporok',95:'Zivatar'};return m[c]||'Változékony'}
+function wIco(c){if(c===0)return'☀️';if(c<=2)return'🌤️';if(c===3)return'☁️';if(c<=48)return'🌫️';if(c<=65)return'🌧️';if(c<=77)return'❄️';if(c<=82)return'🌦️';return'⛈️'}
+function calcSolunar(lat,date){
+  const jd=367*date.getFullYear()-Math.floor(7*(date.getFullYear()+Math.floor((date.getMonth()+10)/12))/4)+Math.floor(275*(date.getMonth()+1)/9)+date.getDate()+1721013.5;
+  const ml=(13.1764*jd+218.3165)%360;const sl=(0.9856*jd-2.472)%360;
+  const diff=((ml-sl+360)%360);const tr=(diff/360)*24;
+  const fmt=h=>{const hh=Math.floor(h)%24;const mm=Math.floor((h%1)*60);return`${pad(hh)}:${pad(mm)}`};
+  const phase=diff/360;
+  let rating=phase<0.05||phase>0.95||(phase>0.48&&phase<0.52)?'⭐⭐⭐⭐ Kiváló':phase<0.2||phase>0.8?'⭐⭐⭐ Jó':'⭐⭐ Közepes';
+  return{major1:`${fmt(tr)} – ${fmt(tr+2)}`,major2:`${fmt((tr+12)%24)} – ${fmt((tr+14)%24)}`,minor1:`${fmt((tr+6)%24)} – ${fmt((tr+7)%24)}`,minor2:`${fmt((tr+18)%24)} – ${fmt((tr+19)%24)}`,rating};
+}
+function fishBans(m){
+  return[{fish:'Csuka',months:[3,4],period:'Márc 1 – Ápr 30'},{fish:'Süllő',months:[3,4],period:'Márc 1 – Ápr 30'},{fish:'Ponty',months:[5],period:'Máj 1 – Máj 31'},{fish:'Harcsa',months:[5],period:'Máj 1 – Máj 31'}].filter(b=>b.months.includes(m));
+}
+
+// ========== UTILS ==========
+function fmtD(d){return new Date(d).toLocaleDateString('hu-HU',{month:'short',day:'numeric'})}
+function pad(n){return String(n).padStart(2,'0')}
+function esc(s){return(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}
+function resetAll(){S={tour:null,participants:[],equipment:[],foods:[],theme:S.theme,collapsedDays:{}};save();renderAll()}
+</script>
+</body>
+</html>
