@@ -269,6 +269,23 @@ textarea.inp{resize:vertical;min-height:70px}
 .inlineEditField{display:inline-block;border:none;background:transparent;font-family:var(--font);font-size:inherit;font-weight:inherit;color:inherit;outline:none;border-bottom:2px dashed var(--txt3);min-width:60px;max-width:180px}
 .inlineEditField:focus{border-color:var(--acc)}
 
+/* CHAT */
+.chatBubble{display:flex;flex-direction:column;max-width:82%;animation:fadeIn .2s}
+.chatBubble.mine{align-self:flex-end;align-items:flex-end}
+.chatBubble.theirs{align-self:flex-start;align-items:flex-start}
+.chatMeta{font-size:11px;font-weight:800;color:var(--txt3);margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.chatAv{width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;font-size:10px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.chatText{padding:10px 13px;border-radius:16px;font-size:14px;font-weight:600;line-height:1.45;word-break:break-word;position:relative}
+.chatBubble.mine .chatText{background:var(--acc);color:#fff;border-bottom-right-radius:4px}
+.chatBubble.theirs .chatText{background:var(--surf2);color:var(--txt);border-bottom-left-radius:4px;border:1px solid var(--border)}
+.chatMention{background:rgba(255,200,0,0.35);border-radius:4px;padding:0 3px;font-weight:900}
+.chatBubble.mine .chatMention{background:rgba(255,255,255,0.3)}
+.chatTime{font-size:10px;color:var(--txt3);margin-top:3px;font-weight:700}
+.chatActions{display:none;gap:5px;margin-top:4px}
+.chatBubble.mine:hover .chatActions,.chatBubble.mine:focus-within .chatActions{display:flex}
+.chatActBtn{border:none;background:var(--surf2);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:800;cursor:pointer;color:var(--txt2)}
+.chatEditedTag{font-size:10px;opacity:.7;font-style:italic;margin-left:4px}
+.chatBadge{position:absolute;top:6px;right:calc(50% - 14px);width:8px;height:8px;border-radius:50%;background:#f44336;border:2px solid var(--surf)}
 /* TOAST */
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--txt);color:var(--bg);padding:10px 20px;border-radius:30px;font-size:14px;font-weight:800;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -532,6 +549,32 @@ textarea.inp{resize:vertical;min-height:70px}
   </div>
 </div>
 
+<!-- ===== PAGE: CHAT ===== -->
+<div class="pg" id="pg-chat">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div class="secTitle">💬 Csapat Chat</div>
+    <button class="btn btnXs" style="background:var(--redL);color:var(--red);border:1px solid var(--red);width:auto" onclick="confirmClearChat()">🗑️ Chat törlése</button>
+  </div>
+  <div id="chatMessages" style="display:flex;flex-direction:column;gap:8px;min-height:200px;padding-bottom:8px"></div>
+  <div style="position:sticky;bottom:72px;background:var(--bg);padding:8px 0 4px">
+    <div id="chatEditBanner" style="display:none;background:var(--oraL);border:1px solid var(--ora);border-radius:8px 8px 0 0;padding:7px 12px;font-size:12px;font-weight:800;color:var(--ora);display:none;align-items:center;justify-content:space-between">
+      <span>✏️ Üzenet szerkesztése</span>
+      <button onclick="cancelEditMsg()" style="border:none;background:none;color:var(--ora);font-size:16px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <div style="flex:1;position:relative">
+        <textarea class="inp" id="chatInput" placeholder="Üzenet... (@név a megemlítéshez)" rows="1"
+          style="resize:none;padding-right:44px;min-height:44px;line-height:1.4"
+          oninput="chatInputGrow(this);chatMentionAC(this)"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMsg()}"
+        ></textarea>
+        <div id="chatMentionList" class="acList" style="bottom:100%;top:auto"></div>
+      </div>
+      <button class="btn btnP" style="width:44px;height:44px;padding:0;flex-shrink:0;border-radius:10px;font-size:20px" onclick="sendChatMsg()">➤</button>
+    </div>
+  </div>
+</div>
+
 <!-- USER PICKER MODAL -->
 <div class="mBd" id="mUserPick">
   <div class="mSheet" style="position:relative">
@@ -550,6 +593,7 @@ textarea.inp{resize:vertical;min-height:70px}
   <button class="bItem" data-pg="food" onclick="goPage('food',this)"><div class="bi">🍲</div><div class="bl">Étkezés</div></button>
   <button class="bItem" data-pg="persons" onclick="goPage('persons',this)"><div class="bi">👤</div><div class="bl">Személyek</div></button>
   <button class="bItem" data-pg="summary" onclick="goPage('summary',this)"><div class="bi">📋</div><div class="bl">Összesítő</div></button>
+  <button class="bItem" data-pg="chat" onclick="goPage('chat',this)" id="chatNavBtn" style="position:relative"><div class="bi">💬</div><div class="bl">Chat</div><span class="chatBadge" id="chatBadge" style="display:none"></span></button>
 </nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -558,6 +602,18 @@ textarea.inp{resize:vertical;min-height:70px}
 const DNAMES=['Vasárnap','Hétfő','Kedd','Szerda','Csütörtök','Péntek','Szombat'];
 
 // ========== SUPABASE ==========
+// CHAT TÁBLA LÉTREHOZÁSA (egyszer kell futtatni Supabase SQL editorban):
+// CREATE TABLE IF NOT EXISTS messages (
+//   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+//   tour_id uuid REFERENCES tours(id) ON DELETE CASCADE,
+//   sender text NOT NULL,
+//   text text NOT NULL,
+//   created_at timestamptz DEFAULT now(),
+//   edited_at timestamptz
+// );
+// ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+// CREATE POLICY "allow all" ON messages FOR ALL USING (true) WITH CHECK (true);
+// ============================================================
 const SUPA_URL = 'https://mwejiodxoffymjboihyd.supabase.co';
 const SUPA_KEY = 'sb_publishable_FXTFut_o1iQ2badLfwC9PA_rda1AA_9';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
@@ -597,6 +653,8 @@ async function load(){
   S.foods = (foods||[]).map(f=>({id:f.id, day:f.day, menu:f.menu, chef:f.chef, ingredients:f.ingredients||[]}));
 
   applyTheme(); renderAll(); initRealtime();
+  await loadChatMessages();
+  initChatRealtime();
   // Névválasztó: ha még nincs user (vagy törölték a listából), megmutatjuk
   if(currentUser && !S.participants.includes(currentUser)) currentUser=null;
   if(!currentUser) showUserPicker();
@@ -736,6 +794,171 @@ async function reloadFromDB(){
   toast('🔄 Frissítve másik eszközről!');
 }
 
+// ========== CHAT ==========
+let chatMessages = [];
+let chatEditingId = null;
+let chatLastRead = 0;
+
+async function loadChatMessages(){
+  if(!TOUR_ID) return;
+  const {data} = await sb.from('messages')
+    .select('*').eq('tour_id', TOUR_ID).order('created_at');
+  chatMessages = data || [];
+  renderChat();
+  updateChatBadge();
+}
+
+function initChatRealtime(){
+  sb.channel('horgasz-chat')
+    .on('postgres_changes', {event:'*', schema:'public', table:'messages', filter:`tour_id=eq.${TOUR_ID}`},
+      async ()=>{
+        await loadChatMessages();
+        // badge ha nem chat oldalon vagyunk
+        const active=document.querySelector('.pg.on')?.id;
+        if(active!=='pg-chat') updateChatBadge();
+      })
+    .subscribe();
+}
+
+function renderChat(){
+  const el=document.getElementById('chatMessages');
+  if(!el) return;
+  if(!chatMessages.length){
+    el.innerHTML='<div class="empty" style="padding:40px 0"><div class="emptyIc">💬</div><p class="emptyTxt">Még nincs üzenet</p></div>';
+    return;
+  }
+  el.innerHTML = chatMessages.map(m => {
+    const mine = m.sender === currentUser;
+    const time = new Date(m.created_at).toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'});
+    const date = new Date(m.created_at).toLocaleDateString('hu-HU',{month:'short',day:'numeric'});
+    const edited = m.edited_at ? '<span class="chatEditedTag">(szerkesztve)</span>' : '';
+    const text = formatChatText(m.text||'');
+    const isMentioned = currentUser && (m.text||'').includes('@'+currentUser);
+    return `<div class="chatBubble ${mine?'mine':'theirs'}" id="cm-${m.id}">
+      ${!mine?`<div class="chatMeta"><span class="chatAv">${(m.sender||'?').charAt(0).toUpperCase()}</span>${esc(m.sender)}</div>`:''}
+      <div class="chatText" style="${isMentioned&&!mine?'box-shadow:0 0 0 2px #ffd600':''}">
+        ${text}${edited}
+      </div>
+      <div class="chatTime">${mine?'':esc(m.sender)+' · '}${date} ${time}</div>
+      ${mine?`<div class="chatActions">
+        <button class="chatActBtn" onclick="startEditMsg('${m.id}')">✏️ Szerkeszt</button>
+        <button class="chatActBtn" style="color:var(--red)" onclick="deleteMsg('${m.id}')">🗑️ Töröl</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
+  // scroll aljára
+  el.scrollTop = el.scrollHeight;
+}
+
+function formatChatText(text){
+  // @mention kiemelés
+  return esc(text).replace(/@(\S+)/g, '<span class="chatMention">@$1</span>');
+}
+
+async function sendChatMsg(){
+  if(!currentUser){ toast('⚠️ Válassz nevet először!'); showUserPicker(); return; }
+  const inp = document.getElementById('chatInput');
+  const text = (inp.value||'').trim();
+  if(!text) return;
+
+  if(chatEditingId){
+    // szerkesztés
+    await sb.from('messages').update({text, edited_at: new Date().toISOString()}).eq('id', chatEditingId).eq('tour_id', TOUR_ID);
+    chatEditingId = null;
+    const banner = document.getElementById('chatEditBanner');
+    if(banner) banner.style.display='none';
+  } else {
+    await sb.from('messages').insert({tour_id: TOUR_ID, sender: currentUser, text});
+  }
+  inp.value='';
+  inp.style.height='';
+  await loadChatMessages();
+}
+
+function startEditMsg(id){
+  const msg = chatMessages.find(m=>m.id===id);
+  if(!msg || msg.sender!==currentUser) return;
+  chatEditingId = id;
+  const inp = document.getElementById('chatInput');
+  inp.value = msg.text;
+  inp.focus();
+  chatInputGrow(inp);
+  const banner = document.getElementById('chatEditBanner');
+  if(banner){ banner.style.display='flex'; }
+}
+
+function cancelEditMsg(){
+  chatEditingId = null;
+  const inp = document.getElementById('chatInput');
+  inp.value=''; inp.style.height='';
+  const banner = document.getElementById('chatEditBanner');
+  if(banner) banner.style.display='none';
+}
+
+async function deleteMsg(id){
+  const msg = chatMessages.find(m=>m.id===id);
+  if(!msg || msg.sender!==currentUser) return;
+  if(!confirm('Törlöd ezt az üzenetet?')) return;
+  await sb.from('messages').delete().eq('id', id).eq('tour_id', TOUR_ID);
+  await loadChatMessages();
+}
+
+async function confirmClearChat(){
+  if(!confirm('⚠️ Az összes üzenet törlődik. Biztosan törlöd a teljes chatet?')) return;
+  await sb.from('messages').delete().eq('tour_id', TOUR_ID);
+  await loadChatMessages();
+  toast('🗑️ Chat törölve');
+}
+
+function updateChatBadge(){
+  const badge = document.getElementById('chatBadge');
+  if(!badge) return;
+  const active = document.querySelector('.pg.on')?.id;
+  if(active==='pg-chat'){ badge.style.display='none'; return; }
+  // van-e olvasatlan vagy mention?
+  const lastRead = parseInt(localStorage.getItem('chatLastRead_'+(TOUR_ID||''))||'0');
+  const unread = chatMessages.filter(m=>{
+    const ts = new Date(m.created_at).getTime();
+    return ts > lastRead && m.sender !== currentUser;
+  });
+  badge.style.display = unread.length ? 'block' : 'none';
+}
+
+function markChatRead(){
+  localStorage.setItem('chatLastRead_'+(TOUR_ID||''), Date.now());
+  const badge = document.getElementById('chatBadge');
+  if(badge) badge.style.display='none';
+}
+
+function chatInputGrow(el){
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight, 120)+'px';
+}
+
+function chatMentionAC(el){
+  const val = el.value;
+  const cursor = el.selectionStart;
+  const before = val.slice(0, cursor);
+  const match = before.match(/@(\w*)$/);
+  const list = document.getElementById('chatMentionList');
+  if(!match){ list.classList.remove('show'); return; }
+  const q = match[1].toLowerCase();
+  const hits = S.participants.filter(p=>p.toLowerCase().includes(q)&&p!==currentUser);
+  if(!hits.length){ list.classList.remove('show'); return; }
+  list.innerHTML = hits.map(p=>`<div class="acItem" onmousedown="insertMention('${esc(p)}')">${p}</div>`).join('');
+  list.classList.add('show');
+}
+
+function insertMention(name){
+  const inp = document.getElementById('chatInput');
+  const val = inp.value;
+  const cursor = inp.selectionStart;
+  const before = val.slice(0,cursor).replace(/@\w*$/,'@'+name+' ');
+  inp.value = before + val.slice(cursor);
+  inp.focus();
+  document.getElementById('chatMentionList').classList.remove('show');
+}
+
 // ========== BOOT ==========
 // Szinkron indítás, majd async load
 applyTheme();
@@ -758,6 +981,7 @@ function goPage(pg, el){
   if(pg==='food') renderFoodPage();
   if(pg==='persons') renderPersonsPage();
   if(pg==='summary') renderSummaryPage();
+  if(pg==='chat'){ loadChatMessages(); markChatRead(); }
 }
 
 // ========== THEME ==========
